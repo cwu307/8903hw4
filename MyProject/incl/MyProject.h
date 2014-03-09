@@ -140,7 +140,7 @@ public:
         delete [] vppm_old;
     }
     void process(float *x, float * output);
-    
+    void getOld(float *old);
 private:
     float *vppm_old;
 
