@@ -14,6 +14,7 @@
 #include "JuceHeader.h"
 #include "MyProject.h"
 
+
 //==============================================================================
 /**
     As the name suggest, this class does the actual audio processing.
@@ -28,9 +29,8 @@ public:
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-    void processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages) override;
-    void processBlockBypassed (AudioSampleBuffer& buffer,MidiBuffer& midiMessages);
-    
+    void processBlock (AudioSampleBuffer& buffer, MidiBuffer& junk) override;
+    void processBlockBypassed (AudioSampleBuffer& buffer, MidiBuffer& midiMessages) override;
     void reset() override;
 
     //==============================================================================
@@ -63,35 +63,52 @@ public:
     void setCurrentProgram (int /*index*/) override                             {}
     const String getProgramName (int /*index*/) override                        { return String::empty; }
     void changeProgramName (int /*index*/, const String& /*newName*/) override  {}
-    
+
     //==============================================================================
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-        int lastUIWidth, lastUIHeight;
+    //==============================================================================
+    // this keeps a copy of the last set of time info that was acquired during an audio
+    // callback - the UI component will read this and display it.
+    AudioPlayHead::CurrentPositionInfo lastPosInfo;
+
+    // these are used to persist the UI's size - the values are stored along with the
+    // filter's other parameters, and the UI component will update them when it gets
+    // resized.
+    int lastUIWidth, lastUIHeight;
 
     //==============================================================================
+    
+    
+    void getPPMValue(float *meterValue);
+    
+    
+        //==============================================================================
     enum Parameters
     {
-        gainParam = 0,
-        delayParam,
-        ModFreqParam,
-        buttonPara,
+        modFreqParam,
+        modAmpParam,
+        bypassParam,
+
         totalNumParams
     };
 
-    float gain, delay, Modfreq;
-    bool bypass;
+    float modFreq, modAmp, bypassStatus;
+    const float fMaxDelayInS    = .2f;
+
 private:
-    //==============================================================================
-    AudioSampleBuffer delayBuffer;
-    int delayPosition;
-    vibrato * myVibrato;
-    vibrato * myVibratoBypass;
+    //==============================================================================    
+    const int   idefaultChannel = 2;
+    
+    // initialize MyProject
+    CMyProject *m_pMyProject; // vibrato instance
+    CMyProject *m_pMyProjectBypass; 
     PPM * myPPM;
     float * x;
     float * output;
-    float currentPhase;
+    
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceDemoPluginAudioProcessor)
 };
 

@@ -54,14 +54,18 @@ public:
 
 private:
     //[UserVariables]   -- You can add your own custom variables in this section.
+    Label*      m_pPluginTitle;
+    Slider*     m_pModFreqSlider;
+    Slider*     m_pModAmpSlider;
+    TextButton* m_pBypassButton;
+    
+    
+    
     //[/UserVariables]
 
     //==============================================================================
-    ScopedPointer<Label> helloWorldLabel;
     ScopedPointer<TextButton> quitButton;
     Path internalPath1;
-
-
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

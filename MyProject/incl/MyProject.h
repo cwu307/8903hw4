@@ -2,129 +2,62 @@
 #define __MyProject_hdr__
 
 #include "ErrorDef.h"
-#include "RingBuffer.h"
-#include<cmath>
 
-// the LFO class
-class LFO{
-public:
-    LFO(float amp,float freq, float samplerate, float phase=0):Freq(freq),Amp(amp),SampleRate(samplerate),Phase(phase),time(0){
-        period_samples = SampleRate/Freq;
-    }
-    virtual ~LFO(){
-    }
-    // get the sin sample value of the LFO
-    float getvalue()
-    {
-        //time = time % period_samples;
-        return Amp*sin(Freq*2*pi*(time++)/SampleRate+Phase);
-    }
-    // set the LFP parameter
-    void setPara(float amp,float freq, float samplerate);
-    // set the timer to 0 and 0 phase
-    float getPhase() const
-    {
-        return float(time)*Freq/SampleRate;
-    }
-    void reset()
-    {
-        time = 0 ;
-        Phase = 0;
-    }
-private:
-    const double pi = 3.1415926;
-    int period_samples;
-    float Freq;
-    float Phase = 0 ;
-    float Amp;
-    float SampleRate;
-    long long time;
-    
-};
+class CLfo;
+template <class T>
+class CRingBuffer;
 
-// the vibrato class
-class vibrato{
+class CMyProject
+{
 public:
-    struct Para{
-        int samplerate;
-        float Modfreq;
-        float Delay;
-        float WIDTH;
-        int iNumChannel;
+    /*! version number */
+    enum Version_t
+    {
+        kMajor, //!< major version number
+        kMinor, //!< minor version number
+        kPatch, //!< patch version number
+
+        kNumVersionInts
     };
-    vibrato(int sp, float d, float Mf, float w):samplerate(sp),Delay(d),Modfreq(Mf/samplerate),iNumChannel(2){
-        // if the user set delay and width(in sec) are more than max, then truncate them with max
-        if (Delay>MAX_BUFFER) {
-            Delay = MAX_BUFFER;
-        }
-        if (w>MAX_BUFFER) {
-            w= MAX_BUFFER;
-        }
-        DELAY = round(Delay * samplerate);
-        WIDTH = round(w * samplerate);
-        // assure delay is bigger than width
-        assert(DELAY>=WIDTH);
-        
-        // every time just allocate the max length of delay buffer
-        L = 2+MAX_BUFFER*2*samplerate;
-        
-        // init the LPO
-        Delay_buffer = new CRingBuffer<float> * [iNumChannel];
-        sinwav = new LFO(WIDTH,Mf,samplerate);
-        
-        for (int i = 0 ; i<iNumChannel; i++) {
-            
-            Delay_buffer[i] = new CRingBuffer<float>(L);
-            Delay_buffer[i]->resetInstance();
-        }
-        
-        
-    }
-    virtual ~vibrato(){
-        for (int i = 0 ; i < iNumChannel; i++) {
-            delete Delay_buffer[i];
-            
-        }
-        delete  Delay_buffer;
-        delete sinwav;
-        Delay_buffer = 0;
-        sinwav = 0 ;
-    }
-    // get the parameter of the state
-    Para getParameters() const
+
+    enum VibratoParam_t
     {
-        Para p;
-        p.samplerate = samplerate;
-        p.WIDTH = WIDTH;
-        p.Delay = Delay;
-        p.Modfreq = Modfreq;
-        return p;
-    }
-    // the process function with input and ouput buffer and the length of them
-    void process(float ** input, float ** output, int len);
-    void processBypass(float ** input, float** output, int len);
-    void setParameter(float d,float Mf, float w);
-    // reset the delay-buffer and the LPO
-    void resetInstance();
-    float getPhase() const
-    {
-        return sinwav->getPhase();
-    }
+        kParamModWidthInS,
+        kParamModFreqInHz,
+
+        kNumVibratoParams
+    };
+    static const int getVersion (const Version_t eVersionIdx);
+    static const char* getBuildDate ();
+
+    static Error_t createInstance (CMyProject*& pCMyProject);
+    static Error_t destroyInstance (CMyProject*& pCMyProject);
+
+    Error_t initInstance (float fMaxModWidthInS, float fSampleRateInHz, int iNumChannels);
+    Error_t resetInstance ();
+
+    Error_t setParam (VibratoParam_t eParam, float fParamValue);
+    float getParam (VibratoParam_t eParam) const;
+
+    Error_t process (float **ppfInputBuffer, float **ppfOutputBuffer, int iNumberOfFrames);
+
+protected:
+    CMyProject ();
+    virtual ~CMyProject ();
+
 private:
-    LFO * sinwav = 0 ;
-    
-    // THE max delay and width in second
-    const int MAX_BUFFER = 3;
-    int round(float x);
-    CRingBuffer<float> **Delay_buffer=0;
-    int samplerate;
-    float Modfreq;
-    float Delay;
-    int DELAY;
-    int WIDTH;
-    int L;
-    int iNumChannel;
+    bool isInParamRange (VibratoParam_t eParam, float fValue);
+
+    bool m_bIsInitialized;
+
+    CLfo *m_pCLfo;
+    CRingBuffer<float> **m_ppCRingBuff;
+
+    float   m_fSampleRate;
+    int     m_iNumChannels;
+    float m_aafParamRange[kNumVibratoParams][2];
 };
+
 
 class PPM{
 public:
@@ -141,9 +74,10 @@ public:
     }
     void process(float *x, float * output);
     void getOld(float *old);
+    
 private:
     float *vppm_old;
-
+    
     float release_time;
     float attack_time;
     float alfa1;
@@ -154,6 +88,3 @@ private:
 
 
 #endif // #if !defined(__MyProject_hdr__)
-
-
-
