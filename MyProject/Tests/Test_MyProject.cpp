@@ -70,14 +70,18 @@ SUITE(MyProject)
         memset(testData, 1, sizeof(float)*iBlocksize);
         tmpInput = new float[iNumChannel];
         tmpOutput = new float[iNumChannel];
+        float * old = new  float[iNumChannel];
+        
         for (int i = 0 ; i < iBlocksize; i++) {
             for (int j = 0 ; j < iNumChannel; j++) {
                 tmpInput[j] = testData[i];
             }
             testPPM -> process(tmpInput, tmpOutput);
+            testPPM -> getOld(old);
             output [i] = tmpOutput[j];
-            CHECK_EQUAL(output[i], testData[i]);
+            CHECK(output[i]>old[j]);
         }
+        delete [] old;
         delete [] tmpInput;
         delete [] tmpOutput;
     }

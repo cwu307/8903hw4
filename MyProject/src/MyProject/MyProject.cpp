@@ -67,6 +67,7 @@ void vibrato::resetInstance()
 //        
 //    }
 //}
+
 void vibrato::processBypass(float **input, float **output, int len)
 {
     setParameter(Delay, 0, 0);

@@ -42,7 +42,7 @@ private:
     Label infoLabel, gainLabel, delayLabel, ModFreqLabel;
     Label title;
     Slider gainSlider, delaySlider,ModFreqSlider;
-    TextButton bypassButton;
+    TextButton e;
     
     ScopedPointer<ResizableCornerComponent> resizer;
     ComponentBoundsConstrainer resizeLimits;
