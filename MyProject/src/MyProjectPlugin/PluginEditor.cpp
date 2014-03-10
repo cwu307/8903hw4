@@ -10,200 +10,259 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <cmath>
+
 
 //==============================================================================
 JuceDemoPluginAudioProcessorEditor::JuceDemoPluginAudioProcessorEditor (JuceDemoPluginAudioProcessor* ownerFilter)
     : AudioProcessorEditor (ownerFilter),
-      //midiKeyboard (ownerFilter->keyboardState, MidiKeyboardComponent::horizontalKeyboard),
+      nameLabel("", "Chih-Wei & Xinquan"),
       infoLabel (String::empty),
-      title("","vibrato"),
-      gainLabel ("", "Width:"),
-      delayLabel ("", "Delay:"),
-      ModFreqLabel("","ModFreqency:")
+      bypassLabel("", "bypass button"),
+      modFreqLabel ("", "Modulation Frequency (sec):"),
+      modAmpLabel ("", "Modulation Amplitude (sec):"),
+      modFreqSlider ("modulation frequency (sec)"),
+      modAmpSlider ("modulation amplitude (sec)"),
+      meterLeftChannel(nullptr),
+      meterRightChannel(nullptr)
 {
-    // add some sliders..
-    addAndMakeVisible (gainSlider);
-    gainSlider.setSliderStyle (Slider::Rotary);
-    gainSlider.addListener (this);
-    gainSlider.setRange (0.0, 1.0, 0.01);
-
-    addAndMakeVisible (delaySlider);
-    delaySlider.setSliderStyle (Slider::Rotary);
-    delaySlider.addListener (this);
-    delaySlider.setRange (0.0, 1.0, 0.01);
-
-    addAndMakeVisible (ModFreqSlider);
-    ModFreqSlider.setSliderStyle (Slider::Rotary);
-    ModFreqSlider.addListener (this);
-    ModFreqSlider.setRange (0.0, 10.0, 0.1);
+    myMeterValue = new float [2];
     
+    // add some sliders..
+    addAndMakeVisible (modFreqSlider);
+    modFreqSlider.addListener (this);
+    modFreqSlider.setRange (0.0, 20.0, 0.01); //freq in Hz
+
+    addAndMakeVisible (modAmpSlider);
+    modAmpSlider.addListener (this);
+    modAmpSlider.setRange (0.0, ownerFilter->fMaxDelayInS, 0.01);    //amp in sec
+
+    // add some buttons..
+    bypassButton = new TextButton ("bypass button");
     addAndMakeVisible(bypassButton);
-    bypassButton.setButtonText("ByPass");
-    bypassButton.addListener(this);
-    bypass = false;
+    bypassButton->addListener(this);
     
     // add some labels for the sliders..
-    gainLabel.attachToComponent (&gainSlider, true);
-    gainLabel.setFont (Font (11.0f));
+    modFreqLabel.attachToComponent (&modFreqSlider, false);
+    modFreqLabel.setFont (Font (11.0f));
 
-    delayLabel.attachToComponent (&delaySlider, true);
-    delayLabel.setFont (Font (11.0f));
+    modAmpLabel.attachToComponent (&modAmpSlider, false);
+    modAmpLabel.setFont (Font (11.0f));
     
-    ModFreqLabel.attachToComponent(&ModFreqSlider, true);
+    addAndMakeVisible(nameLabel);
+    nameLabel.setFont(Font (20.0f));
 
     // add a label that will display the current timecode and status..
     addAndMakeVisible (infoLabel);
     infoLabel.setColour (Label::textColourId, Colours::blue);
+    infoLabel.setFont(Font (20.0f));
     
-    addAndMakeVisible(title);
-    title.setColour(Label::textColourId, Colours::blue);
-    title.setFont(Font(12.0f));
+    
+    // add meter component
+    meterLeftChannel = new MeterComponent ();
+    addAndMakeVisible(meterLeftChannel);
+    meterRightChannel = new MeterComponent ();
+    addAndMakeVisible(meterRightChannel);
 
-    // add the triangular resizer component for the bottom-right of the UI
-    addAndMakeVisible (resizer = new ResizableCornerComponent (this, &resizeLimits));
-    resizeLimits.setSizeLimits (150, 150, 800, 300);
 
-    // set our component's initial size to be the last one that was stored in the filter's settings
-    setSize (ownerFilter->lastUIWidth,
-             ownerFilter->lastUIHeight);
+    setSize (600, 400);
 
-    startTimer (50);
+    startTimer (10); //update every 10 ms
 }
 
 JuceDemoPluginAudioProcessorEditor::~JuceDemoPluginAudioProcessorEditor()
 {
-}
-
-void JuceDemoPluginAudioProcessorEditor::buttonClicked (Button* button)
-{
-    if (button == &bypassButton) {
-        if (bypass) {
-            getProcessor()->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::buttonPara,
-                                                1.0F);
-            bypass = false;
-        }
-        else {
-            getProcessor()->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::buttonPara,
-                                                      0.0F);
-            bypass = true;
-        }
-        
-    }
+    delete [] myMeterValue;
 }
 
 //==============================================================================
 void JuceDemoPluginAudioProcessorEditor::paint (Graphics& g)
 {
-    g.setGradientFill (ColourGradient (Colours::white, 0, 0,
-                                       Colours::grey, 0, (float) getHeight(), false));
+    g.setColour(Colours::grey);
     g.fillAll();
+    
 }
 
 void JuceDemoPluginAudioProcessorEditor::resized()
 {
+    nameLabel.setBounds (100, 100, 150, 40);
     infoLabel.setBounds (10, 4, 400, 25);
-    gainSlider.setBounds (40, 60, 140, 40);
-    delaySlider.setBounds (220, 60, 140, 40);
-    ModFreqSlider.setBounds(100, 120, 150, 40);
-    bypassButton.setBounds(250, 120, 40, 20);
-    title.setBounds(150, 20, 50, 35);
+    modFreqSlider.setBounds (20, 60, 150, 40);
+    modAmpSlider.setBounds (200, 60, 150, 40);
+    bypassButton->setBounds (100, 150, 150, 40);
+    meterLeftChannel->setBounds(300, 150, 200, 30);
+    meterRightChannel->setBounds(300, 190, 200, 30);
 
-
-    resizer->setBounds (getWidth() - 16, getHeight() - 16, 16, 16);
-
-    getProcessor()->lastUIWidth = getWidth();
-    getProcessor()->lastUIHeight = getHeight();
+    
 }
 
 //==============================================================================
 // This timer periodically checks whether any of the filter's parameters have changed...
 void JuceDemoPluginAudioProcessorEditor::timerCallback()
 {
-    JuceDemoPluginAudioProcessor* ourProcessor = getProcessor();
+    JuceDemoPluginAudioProcessor *ourProcessor = getProcessor();
 
-    gainSlider.setValue (ourProcessor->gain, sendNotificationSync);
-    delaySlider.setValue (ourProcessor->delay, sendNotificationSync);
-    ModFreqSlider.setValue(ourProcessor->Modfreq,sendNotificationSync);
+//    AudioPlayHead::CurrentPositionInfo newPos (ourProcessor->lastPosInfo);
+
+//    if (lastDisplayedPosition != newPos)
+//        displayPositionInfo (newPos);
+
+    modFreqSlider.setValue (ourProcessor->modFreq, dontSendNotification);
+    modAmpSlider.setValue (ourProcessor->modAmp, dontSendNotification);
+    
+    ourProcessor->getPPMValue(myMeterValue);
+    meterLeftChannel->setValue(myMeterValue[0]);
+    meterRightChannel->setValue(myMeterValue[1]);
+    meterLeftChannel->repaint();
+    meterRightChannel->repaint();
     
 }
 
 // This is our Slider::Listener callback, when the user drags a slider.
 void JuceDemoPluginAudioProcessorEditor::sliderValueChanged (Slider* slider)
 {
-    if (slider == &gainSlider)
+    if (slider == &modFreqSlider)
     {
         // It's vital to use setParameterNotifyingHost to change any parameters that are automatable
         // by the host, rather than just modifying them directly, otherwise the host won't know
         // that they've changed.
-        getProcessor()->setParameterNotifyingHost (JuceDemoPluginAudioProcessor::gainParam,
-                                                   (float) gainSlider.getValue());
+        getProcessor()->setParameterNotifyingHost (JuceDemoPluginAudioProcessor::modFreqParam,
+                                                   (float) modFreqSlider.getValue());
     }
-    else if (slider == &delaySlider)
+    else if (slider == &modAmpSlider)
     {
-        getProcessor()->setParameterNotifyingHost (JuceDemoPluginAudioProcessor::delayParam,
-                                                   (float) delaySlider.getValue());
+        getProcessor()->setParameterNotifyingHost (JuceDemoPluginAudioProcessor::modAmpParam,
+                                                   (float) modAmpSlider.getValue());
     }
-    else if (slider == &ModFreqSlider)
+}
+
+void JuceDemoPluginAudioProcessorEditor::buttonClicked (Button* button)
+{
+    if (button == bypassButton)
     {
-        getProcessor()->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::ModFreqParam, (float)ModFreqSlider.getValue());
+        JuceDemoPluginAudioProcessor *ourProcessor = getProcessor();
+        float curStatus = ourProcessor->bypassStatus;
+        
+        if (curStatus == 1.0f)
+        {
+            ourProcessor->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::bypassParam, 0.0f);
+        }
+        else
+        {
+            ourProcessor->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::bypassParam, 1.0f);
+        }
     }
+    
 }
 
-//==============================================================================
-// quick-and-dirty function to format a timecode string
-static const String timeToTimecodeString (const double seconds)
+
+
+////==============================================================================
+//// quick-and-dirty function to format a timecode string
+//static const String timeToTimecodeString (const double seconds)
+//{
+//    const double absSecs = fabs (seconds);
+//
+//    const int hours =  (int) (absSecs / (60.0 * 60.0));
+//    const int mins  = ((int) (absSecs / 60.0)) % 60;
+//    const int secs  = ((int) absSecs) % 60;
+//
+//    String s (seconds < 0 ? "-" : "");
+//
+//    s << String (hours).paddedLeft ('0', 2) << ":"
+//      << String (mins) .paddedLeft ('0', 2) << ":"
+//      << String (secs) .paddedLeft ('0', 2) << ":"
+//      << String (roundToInt (absSecs * 1000) % 1000).paddedLeft ('0', 3);
+//
+//    return s;
+//}
+//
+//// quick-and-dirty function to format a bars/beats string
+//static const String ppqToBarsBeatsString (double ppq, double /*lastBarPPQ*/, int numerator, int denominator)
+//{
+//    if (numerator == 0 || denominator == 0)
+//        return "1|1|0";
+//
+//    const int ppqPerBar = (numerator * 4 / denominator);
+//    const double beats  = (fmod (ppq, ppqPerBar) / ppqPerBar) * numerator;
+//
+//    const int bar    = ((int) ppq) / ppqPerBar + 1;
+//    const int beat   = ((int) beats) + 1;
+//    const int ticks  = ((int) (fmod (beats, 1.0) * 960.0 + 0.5));
+//
+//    String s;
+//    s << bar << '|' << beat << '|' << ticks;
+//    return s;
+//}
+
+//// Updates the text in our position label.
+//void JuceDemoPluginAudioProcessorEditor::displayPositionInfo (const AudioPlayHead::CurrentPositionInfo& pos)
+//{
+//    lastDisplayedPosition = pos;
+//    String displayText;
+//    displayText.preallocateBytes (128);
+//
+//    displayText << String (pos.bpm, 2) << " bpm, "
+//                << pos.timeSigNumerator << '/' << pos.timeSigDenominator
+//                << "  -  " << timeToTimecodeString (pos.timeInSeconds)
+//                << "  -  " << ppqToBarsBeatsString (pos.ppqPosition, pos.ppqPositionOfLastBarStart,
+//                                                    pos.timeSigNumerator, pos.timeSigDenominator);
+//
+//    if (pos.isRecording)
+//        displayText << "  (recording)";
+//    else if (pos.isPlaying)
+//        displayText << "  (playing)";
+//
+//    infoLabel.setText (displayText, dontSendNotification);
+//}
+
+
+//================ meter component ================
+
+MeterComponent::MeterComponent() : m_fInternalValue(0)
 {
-    const double absSecs = fabs (seconds);
-
-    const int hours =  (int) (absSecs / (60.0 * 60.0));
-    const int mins  = ((int) (absSecs / 60.0)) % 60;
-    const int secs  = ((int) absSecs) % 60;
-
-    String s (seconds < 0 ? "-" : "");
-
-    s << String (hours).paddedLeft ('0', 2) << ":"
-      << String (mins) .paddedLeft ('0', 2) << ":"
-      << String (secs) .paddedLeft ('0', 2) << ":"
-      << String (roundToInt (absSecs * 1000) % 1000).paddedLeft ('0', 3);
-
-    return s;
+    setSize(200, 30);
 }
 
-// quick-and-dirty function to format a bars/beats string
-static const String ppqToBarsBeatsString (double ppq, double /*lastBarPPQ*/, int numerator, int denominator)
+MeterComponent::~MeterComponent()
 {
-    if (numerator == 0 || denominator == 0)
-        return "1|1|0";
-
-    const int ppqPerBar = (numerator * 4 / denominator);
-    const double beats  = (fmod (ppq, ppqPerBar) / ppqPerBar) * numerator;
-
-    const int bar    = ((int) ppq) / ppqPerBar + 1;
-    const int beat   = ((int) beats) + 1;
-    const int ticks  = ((int) (fmod (beats, 1.0) * 960.0 + 0.5));
-
-    String s;
-    s << bar << '|' << beat << '|' << ticks;
-    return s;
 }
 
-// Updates the text in our position label.
-void JuceDemoPluginAudioProcessorEditor::displayPositionInfo (const AudioPlayHead::CurrentPositionInfo& pos)
+void MeterComponent::paint(Graphics &g)
 {
-    lastDisplayedPosition = pos;
-    String displayText;
-    displayText.preallocateBytes (128);
-
-    displayText << String (pos.bpm, 2) << " bpm, "
-                << pos.timeSigNumerator << '/' << pos.timeSigDenominator
-                << "  -  " << timeToTimecodeString (pos.timeInSeconds)
-                << "  -  " << ppqToBarsBeatsString (pos.ppqPosition, pos.ppqPositionOfLastBarStart,
-                                                    pos.timeSigNumerator, pos.timeSigDenominator);
-
-    if (pos.isRecording)
-        displayText << "  (recording)";
-    else if (pos.isPlaying)
-        displayText << "  (playing)";
-
-    infoLabel.setText (displayText, dontSendNotification);
+    // background
+    g.setColour(Colours::black);
+    g.fillRect(0, 0, 200, 30);
+    // moving green
+    float currentValue = getValue();
+    int greenLen = floor(currentValue * 190);
+    g.setColour(Colours::green);
+    g.fillRect(5, 5, greenLen, 20);
+    
 }
+
+void MeterComponent::setValue (float fMeterValue)
+{
+    // value needs to be transformed to dB
+    float meterValueInDb = 20 * log10f(fMeterValue);
+    float displayValue = 0;
+    if (meterValueInDb > -12)
+    {
+        displayValue = (meterValueInDb + 12) / 12; //between 0~1
+        
+    }
+    m_fInternalValue = displayValue;
+}
+
+float MeterComponent::getValue()
+{
+    return m_fInternalValue;
+}
+
+
+
+
+
+
+
+

@@ -14,14 +14,15 @@
 #include "JuceHeader.h"
 #include "PluginProcessor.h"
 
+class MeterComponent;
 
 //==============================================================================
 /** This is the editor component that our filter will display.
 */
 class JuceDemoPluginAudioProcessorEditor  : public AudioProcessorEditor,
                                             public SliderListener,
-                                            public Timer,
-                                            public ButtonListener
+                                            public ButtonListener,
+                                            public Timer
 {
 public:
     JuceDemoPluginAudioProcessorEditor (JuceDemoPluginAudioProcessor* ownerFilter);
@@ -32,30 +33,55 @@ public:
     void paint (Graphics&) override;
     void resized() override;
     void sliderValueChanged (Slider*) override;
-    
-    
     void buttonClicked (Button*) override;
-    bool bypass;
 
 private:
-
-    Label infoLabel, gainLabel, delayLabel, ModFreqLabel;
-    Label title;
-    Slider gainSlider, delaySlider,ModFreqSlider;
-    TextButton e;
-    
+    Label nameLabel, infoLabel, bypassLabel, modFreqLabel, modAmpLabel;
+    Slider modFreqSlider, modAmpSlider;
+    TextButton *bypassButton;
     ScopedPointer<ResizableCornerComponent> resizer;
     ComponentBoundsConstrainer resizeLimits;
+    float *myMeterValue;
+    ScopedPointer<MeterComponent> meterLeftChannel;
+    ScopedPointer<MeterComponent> meterRightChannel;
 
-    AudioPlayHead::CurrentPositionInfo lastDisplayedPosition;
-
+    //AudioPlayHead::CurrentPositionInfo lastDisplayedPosition;
     JuceDemoPluginAudioProcessor* getProcessor() const
     {
         return static_cast <JuceDemoPluginAudioProcessor*> (getAudioProcessor());
     }
 
-    void displayPositionInfo (const AudioPlayHead::CurrentPositionInfo& pos);
 };
+
+//================ meter component ================
+
+class MeterComponent : public Component
+{
+public:
+    
+    MeterComponent();
+    ~MeterComponent();
+    void paint (Graphics &g) override;
+    void setValue (float fMeterValue);
+    float getValue ();
+    
+private:
+    float m_fInternalValue;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #endif  // __PLUGINEDITOR_H_4ACCBAA__

@@ -13,7 +13,7 @@ SUITE(MyProject)
 {
     struct MyProjectData
     {
-        MyProjectData() 
+        MyProjectData()
         {
             testPPM = new PPM(defaultAttack,defaultRelease,defaulSampleRate,iNumChannel);
             testData = new float[iBlocksize];
@@ -23,8 +23,8 @@ SUITE(MyProject)
             alfa2 = 1 - exp(-2.2/(defaulSampleRate*defaultAttack));
             
         }
-
-        ~MyProjectData() 
+        
+        ~MyProjectData()
         {
             delete testPPM;
             delete []testData;
@@ -34,15 +34,15 @@ SUITE(MyProject)
         float * output;
         float * tmpInput;
         float * tmpOutput;
-        float defaultAttack = 0.3;
-        float defaultRelease = 1.0;
+        float defaultAttack = 0.03;
+        float defaultRelease = 0.1;
         float defaulSampleRate = 44100;
         int iBlocksize = 2048;
         int iNumChannel = 1;
         float alfa1;
         float alfa2;
     };
-
+    
     TEST_FIXTURE(MyProjectData, NoTest)
     {
         CHECK_EQUAL (0 ,0);
@@ -57,12 +57,12 @@ SUITE(MyProject)
                 tmpInput[j] = testData[i];
             }
             testPPM -> process(tmpInput, tmpOutput);
-            output [i] = tmpOutput[j];
+            output [i] = tmpOutput[0];
             CHECK_EQUAL(output[i], testData[i]);
         }
         delete [] tmpInput;
         delete [] tmpOutput;
-
+        
         
     }
     TEST_FIXTURE(MyProjectData, DC)
@@ -76,10 +76,11 @@ SUITE(MyProject)
             for (int j = 0 ; j < iNumChannel; j++) {
                 tmpInput[j] = testData[i];
             }
-            testPPM -> process(tmpInput, tmpOutput);
             testPPM -> getOld(old);
-            output [i] = tmpOutput[j];
-            CHECK(output[i]>old[j]);
+            testPPM -> process(tmpInput, tmpOutput);
+            
+            output [i] = tmpOutput[0];
+            CHECK(output[i]>old[0]);
         }
         delete [] old;
         delete [] tmpInput;
@@ -93,9 +94,9 @@ SUITE(MyProject)
         MultiOutput = new float *[2];
         
         for (int i = 0 ; i < 2 ; i ++) {
-            MultiInput[i] = new float(iBlocksize);
+            MultiInput[i] = new float[iBlocksize];
             CSignalGen::generateSine(MultiInput[i], 20.F, defaulSampleRate, iBlocksize, .7F, static_cast<float>(M_PI_2));
-
+            
             MultiOutput[i] = new float[iBlocksize];
             
         }
@@ -106,7 +107,7 @@ SUITE(MyProject)
                 tmpInput[j] = testData[i];
             }
             testPPM -> process(tmpInput, tmpOutput);
-            output [i] = tmpOutput[j];
+            output [i] = tmpOutput[0];
         }
         
         delete []tmpInput;
@@ -117,7 +118,7 @@ SUITE(MyProject)
         delete testPPM;
         tmpInput = new float[iNumChannel];
         tmpOutput = new float[iNumChannel];
-        testPPM = new PPM(defaultAttack,defaultRelease,iNumChannel);
+        testPPM = new PPM(defaultAttack,defaultRelease,defaulSampleRate,iNumChannel);
         
         for (int i = 0 ; i < iBlocksize; i++) {
             for (int j = 0 ; j < iNumChannel; j++) {
@@ -125,9 +126,9 @@ SUITE(MyProject)
             }
             testPPM -> process(tmpInput, tmpOutput);
             for (int j = 0 ;  j < iNumChannel; j++) {
-                MultiInput[j][i] = tmpOutput[j];
+                MultiOutput[j][i] = tmpOutput[j];
             }
-            CHECK_EQUAL(MultiOutput[1][i], output[i]);
+            CHECK_EQUAL(MultiOutput[0][i], output[i]);
             
         }
         for (int i = 0 ;  i < iNumChannel; i++) {
@@ -154,7 +155,7 @@ SUITE(MyProject)
             testPPM -> process(tmpInput, tmpOutput);
             testPPM -> getOld(Old);
             float expect = alfa2*fabs(tmpInput[0]) + (1-alfa2)*Old[0];
-            CHECK_EQUAL(tmpOutput[0], expect);
+            CHECK_CLOSE(tmpOutput[0], expect, 0.1);
         }
         delete []tmpInput;
         delete [] tmpOutput;
@@ -172,15 +173,17 @@ SUITE(MyProject)
             for (int j = 0 ; j < iNumChannel; j++) {
                 tmpInput[j] = testData[i];
             }
-            testPPM -> process(tmpInput, tmpOutput);
             testPPM -> getOld(Old);
-            float expect = (1-alfa1)*Old[i];
-            CHECK_EQUAL(tmpOutput[0], expect);
+            testPPM -> process(tmpInput, tmpOutput);
+            float m = Old[0];
+            float n = testData[i];
+            float expect = (1-alfa1)*Old[0];
+            CHECK_CLOSE(tmpOutput[0], expect,0.5);
         }
         delete []tmpInput;
         delete [] tmpOutput;
         delete [] Old;
-
+        
     }
 }
 

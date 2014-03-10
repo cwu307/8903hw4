@@ -15,146 +15,28 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter();
 
 
 //==============================================================================
-/** A demo synth sound that's just a basic sine wave.. */
-class SineWaveSound : public SynthesiserSound
-{
-public:
-    SineWaveSound() {}
+// define default values
+const float fdefaultModFreq  = 0.0f;
+const float fdefaultModAmp   = 0.0f;
+const float  bdefaultBypassStatus    = 0.0f;
 
-    bool appliesToNote (const int /*midiNoteNumber*/)           { return true; }
-    bool appliesToChannel (const int /*midiChannel*/)           { return true; }
-};
-
-//==============================================================================
-/** A simple demo synth voice that just plays a sine wave.. */
-class SineWaveVoice  : public SynthesiserVoice
-{
-public:
-    SineWaveVoice()
-        : angleDelta (0.0),
-          tailOff (0.0)
-    {
-    }
-
-    bool canPlaySound (SynthesiserSound* sound)
-    {
-        return dynamic_cast <SineWaveSound*> (sound) != 0;
-    }
-
-    void startNote (int midiNoteNumber, float velocity,
-                    SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/)
-    {
-        currentAngle = 0.0;
-        level = velocity * 0.15;
-        tailOff = 0.0;
-
-        double cyclesPerSecond = MidiMessage::getMidiNoteInHertz (midiNoteNumber);
-        double cyclesPerSample = cyclesPerSecond / getSampleRate();
-
-        angleDelta = cyclesPerSample * 2.0 * double_Pi;
-    }
-
-    void stopNote (bool allowTailOff)
-    {
-        if (allowTailOff)
-        {
-            // start a tail-off by setting this flag. The render callback will pick up on
-            // this and do a fade out, calling clearCurrentNote() when it's finished.
-
-            if (tailOff == 0.0) // we only need to begin a tail-off if it's not already doing so - the
-                                // stopNote method could be called more than once.
-                tailOff = 1.0;
-        }
-        else
-        {
-            // we're being told to stop playing immediately, so reset everything..
-
-            clearCurrentNote();
-            angleDelta = 0.0;
-        }
-    }
-
-    void pitchWheelMoved (int /*newValue*/)
-    {
-        // can't be bothered implementing this for the demo!
-    }
-
-    void controllerMoved (int /*controllerNumber*/, int /*newValue*/)
-    {
-        // not interested in controllers in this case.
-    }
-
-    void renderNextBlock (AudioSampleBuffer& outputBuffer, int startSample, int numSamples)
-    {
-        if (angleDelta != 0.0)
-        {
-            if (tailOff > 0)
-            {
-                while (--numSamples >= 0)
-                {
-                    const float currentSample = (float) (sin (currentAngle) * level * tailOff);
-
-                    for (int i = outputBuffer.getNumChannels(); --i >= 0;)
-                        *outputBuffer.getSampleData (i, startSample) += currentSample;
-
-                    currentAngle += angleDelta;
-                    ++startSample;
-
-                    tailOff *= 0.99;
-
-                    if (tailOff <= 0.005)
-                    {
-                        clearCurrentNote();
-
-                        angleDelta = 0.0;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                while (--numSamples >= 0)
-                {
-                    const float currentSample = (float) (sin (currentAngle) * level);
-
-                    for (int i = outputBuffer.getNumChannels(); --i >= 0;)
-                        *outputBuffer.getSampleData (i, startSample) += currentSample;
-
-                    currentAngle += angleDelta;
-                    ++startSample;
-                }
-            }
-        }
-    }
-
-private:
-    double currentAngle, angleDelta, level, tailOff;
-};
-
-const float defaultGain = 0.1f;
-const float defaultDelay = 0.5f;
-const float defaultModfreq = 1.0f;
-const bool defaltBypass = false;
-const float defaultAttack = 0.2;
-const float defaultRelease = 1;
 //==============================================================================
 JuceDemoPluginAudioProcessor::JuceDemoPluginAudioProcessor()
-    : delayBuffer (2, 12000)
 {
     // Set up some default values..
-    gain = defaultGain;
-    delay = defaultDelay;
-    bypass = defaltBypass;
-    myVibrato = 0 ;
+    modFreq      = fdefaultModFreq;
+    modAmp       = fdefaultModAmp;
+    bypassStatus = bdefaultBypassStatus;
+    
     lastUIWidth = 400;
     lastUIHeight = 200;
-    delayPosition = 0;
 
+    lastPosInfo.resetToDefault();
+    
 }
 
 JuceDemoPluginAudioProcessor::~JuceDemoPluginAudioProcessor()
 {
-
 }
 
 //==============================================================================
@@ -170,13 +52,14 @@ float JuceDemoPluginAudioProcessor::getParameter (int index)
     // UI-related, or anything at all that may block in any way!
     switch (index)
     {
-        case gainParam:     return gain;
-        case delayParam:    return delay;
-        case ModFreqParam: return Modfreq;
-        case buttonPara:   return bypass;
+        case modFreqParam:     return modFreq;
+        case modAmpParam:    return modAmp;
+        case bypassParam: return bypassStatus;
         default:            return 0.0f;
     }
 }
+
+
 
 void JuceDemoPluginAudioProcessor::setParameter (int index, float newValue)
 {
@@ -185,16 +68,10 @@ void JuceDemoPluginAudioProcessor::setParameter (int index, float newValue)
     // UI-related, or anything at all that may block in any way!
     switch (index)
     {
-        case gainParam:     gain = newValue;    break;
-        case delayParam:    delay = newValue;   break;
-        case ModFreqParam:  Modfreq = newValue; break;
-        case buttonPara:
-            if (newValue==1) {
-                bypass = true;
-            }
-            else bypass = false;
-            break;
-        default:       myVibrato->setParameter(this->getParameter(delayParam),this->getParameter(ModFreqParam), this->getParameter(gainParam));     break;
+        case modFreqParam: modFreq = newValue; break;
+        case modAmpParam:  modAmp  = newValue; break;
+        case bypassParam:  bypassStatus = newValue; break;
+        default: break;
     }
 }
 
@@ -202,10 +79,9 @@ float JuceDemoPluginAudioProcessor::getParameterDefaultValue (int index)
 {
     switch (index)
     {
-        case gainParam:     return defaultGain;
-        case delayParam:    return defaultDelay;
-        case ModFreqParam: return defaultModfreq;
-        case buttonPara:    return false;
+        case modFreqParam:     return fdefaultModFreq;
+        case modAmpParam:      return fdefaultModAmp;
+        case bypassParam:      return bdefaultBypassStatus;
         default:            break;
     }
 
@@ -216,13 +92,10 @@ const String JuceDemoPluginAudioProcessor::getParameterName (int index)
 {
     switch (index)
     {
-        case gainParam:     return "gain";
-        case delayParam:    return "delay";
-        case ModFreqParam: return "Modfrequency";
-        case buttonPara:  return "Bypass";
-            
-        default:
-            break;
+        case modFreqParam:     return "modulation frequency";
+        case modAmpParam:      return "modulation amplitude";
+        case bypassParam:      return "bypass status";
+        default:            break;
     }
 
     return String::empty;
@@ -238,12 +111,24 @@ void JuceDemoPluginAudioProcessor::prepareToPlay (double sampleRate, int /*sampl
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    delayBuffer.clear();
-    myVibrato = new vibrato(sampleRate,delay,Modfreq,gain);
-    myVibratoBypass = new vibrato(sampleRate,delay,0,0);
-    myPPM = new PPM(defaultAttack, defaultRelease , sampleRate, 2);
+    //int iNumOfChannels = this->getNumInputChannels();
+    
+    // Create instance here
+    CMyProject::createInstance(m_pMyProject);
+    CMyProject::createInstance(m_pMyProjectBypass);
+
+    myPPM = new PPM(0.05, 1.2 , sampleRate, 2);
     x = new float[2];
     output = new float[2];
+    
+    // initialize MyProject here
+    m_pMyProject->initInstance(fMaxDelayInS, sampleRate, idefaultChannel);
+    
+    m_pMyProjectBypass->initInstance(fMaxDelayInS, sampleRate, idefaultChannel);
+    
+    // parameters are always zeros for bypass block
+    m_pMyProjectBypass->setParam(CMyProject::kParamModFreqInHz, 0.0f);
+    m_pMyProjectBypass->setParam(CMyProject::kParamModWidthInS, 0.0f);
     
 }
 
@@ -251,75 +136,92 @@ void JuceDemoPluginAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    // Destroy instances here
+    CMyProject::destroyInstance(m_pMyProject);
+    CMyProject::destroyInstance(m_pMyProjectBypass);
     
-    
-    //myVibrato -> resetInstance();
-    delete myVibrato;
-    delete myVibratoBypass;
-    delete myPPM;
-    delete [] x;
-    delete [] output;
-    myVibratoBypass = 0 ;
-    myVibrato = 0;
-    myPPM = 0 ;
-
 }
 
 void JuceDemoPluginAudioProcessor::reset()
 {
     // Use this method as the place to clear any delay lines, buffers, etc, as it
     // means there's been a break in the audio's continuity.
-    delayBuffer.clear();
-    myVibrato -> resetInstance();
-    myVibratoBypass -> resetInstance();
+    // delayBuffer.clear();
+    m_pMyProject->resetInstance();
+    m_pMyProjectBypass->resetInstance();
+    
 }
 
-void JuceDemoPluginAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
+
+// ================process implementations ========================//
+
+void JuceDemoPluginAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& junk)
 {
     
-    if (!bypass) {
-        const int numSamples = buffer.getNumSamples();
-        float ** input = buffer.getArrayOfChannels();
-        const int numChannels = buffer.getNumChannels();
-        //myVibrato->setParameter(getParameter(delayParam),getParameter(ModFreqParam), getParameter(gainParam));
-        myVibrato->process(input, input, numSamples);
-        for (int i = 0 ; i < numSamples; i++) {
-            for (int j = 0 ;  j < numChannels ; j++) {
-                x[j] = input[j][i];
-                
+    // set my filter parameters here
+    m_pMyProject->setParam(CMyProject::kParamModFreqInHz, getParameter(modFreqParam));
+    m_pMyProject->setParam(CMyProject::kParamModWidthInS, getParameter(modAmpParam));
+    
+    const int m_iNumSamples  = buffer.getNumSamples();
+    const int m_iNumChannels = buffer.getNumChannels();
+    float **m_ppInputBuffer  = buffer.getArrayOfChannels();
+    
+    if (getParameter(bypassParam) == 1.0)
+    {
+        this->processBlockBypassed(buffer, junk);
+    }
+    else
+    {
+        m_pMyProject->process(m_ppInputBuffer, m_ppInputBuffer, m_iNumSamples);
+        
+        for (int i = 0 ; i < m_iNumSamples; i++)
+        {
+            for (int j = 0 ;  j < m_iNumChannels ; j++)
+            {
+                x[j] = m_ppInputBuffer[j][i];
             }
             myPPM -> process(x, output);
         }
         
-        buffer.setDataToReferTo(input, 2, numSamples);
+        
+        
+        buffer.setDataToReferTo(m_ppInputBuffer, m_iNumChannels, m_iNumSamples);
     }
-    else{
-        processBlockBypassed(buffer, midiMessages);
-        currentPhase = 0;
-    }
-    
- 
+
+    // In case we have more outputs than inputs, we'll clear any output
+    // channels that didn't contain input data, (because these aren't
+    // guaranteed to be empty - they may contain garbage).
     for (int i = getNumInputChannels(); i < getNumOutputChannels(); ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-   
-}
-void JuceDemoPluginAudioProcessor::processBlockBypassed (AudioSampleBuffer& buffer,MidiBuffer& midiMessages){
-    const int numSamples = buffer.getNumSamples();
-    float ** input = buffer.getArrayOfChannels();
-    const int numChannels = buffer.getNumChannels();
-    
-    myVibratoBypass->processBypass(input, input, numSamples);
-    for (int i = 0 ; i < numSamples; i++) {
-        for (int j = 0 ;  j < numChannels ; j++) {
-            x[j] = input[j][i];
-            
-        }
-        myPPM -> process(x, output);
-    }
+    // ask the host for the current time so we can display it...
+    AudioPlayHead::CurrentPositionInfo newTime;
 
-    buffer.setDataToReferTo(input, 2, numSamples);
+    if (getPlayHead() != nullptr && getPlayHead()->getCurrentPosition (newTime))
+    {
+        // Successfully got the current time from the host..
+        lastPosInfo = newTime;
+    }
+    else
+    {
+        // If the host fails to fill-in the current time, we'll just clear it to a default..
+        lastPosInfo.resetToDefault();
+    }
 }
+
+
+void JuceDemoPluginAudioProcessor::processBlockBypassed (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
+{
+    const int m_iBypassNumSamples  = buffer.getNumSamples();
+    const int m_iBypassNumChannels = buffer.getNumChannels();
+    float **m_ppBypassInputBuffer  = buffer.getArrayOfChannels();
+
+    m_pMyProjectBypass->process(m_ppBypassInputBuffer, m_ppBypassInputBuffer, m_iBypassNumSamples);
+    
+    buffer.setDataToReferTo(m_ppBypassInputBuffer, m_iBypassNumChannels, m_iBypassNumSamples);
+}
+// =================================================================//
+
 
 //==============================================================================
 AudioProcessorEditor* JuceDemoPluginAudioProcessor::createEditor()
@@ -339,8 +241,8 @@ void JuceDemoPluginAudioProcessor::getStateInformation (MemoryBlock& destData)
     // add some attributes to it..
     xml.setAttribute ("uiWidth", lastUIWidth);
     xml.setAttribute ("uiHeight", lastUIHeight);
-    xml.setAttribute ("gain", gain);
-    xml.setAttribute ("delay", delay);
+    xml.setAttribute ("modFreq", modFreq);
+    xml.setAttribute ("modAmp", modAmp);
 
     // then use this helper function to stuff it into the binary blob and return it..
     copyXmlToBinary (xml, destData);
@@ -363,9 +265,8 @@ void JuceDemoPluginAudioProcessor::setStateInformation (const void* data, int si
             lastUIWidth  = xmlState->getIntAttribute ("uiWidth", lastUIWidth);
             lastUIHeight = xmlState->getIntAttribute ("uiHeight", lastUIHeight);
 
-            gain  = (float) xmlState->getDoubleAttribute ("gain", gain);
-            delay = (float) xmlState->getDoubleAttribute ("delay", delay);
-            Modfreq = (float) xmlState->getDoubleAttribute("ModFrequency",Modfreq);
+            modFreq  = (float) xmlState->getDoubleAttribute ("modFreq", modFreq);
+            modAmp = (float) xmlState->getDoubleAttribute ("modAmp", modAmp);
         }
     }
 }
@@ -417,6 +318,17 @@ double JuceDemoPluginAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
+
+void JuceDemoPluginAudioProcessor::getPPMValue(float *meterValue)
+{
+    for (int i = 0; i < 2 ; i++)
+    {
+        meterValue[i] = output[i];
+    }
+   
+}
+
+
 
 //==============================================================================
 // This creates new instances of the plugin..
