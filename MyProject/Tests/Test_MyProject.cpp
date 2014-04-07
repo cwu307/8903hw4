@@ -35,12 +35,17 @@ SUITE(FeatureExtrct){
         {
             MyTestFeatureExtractor = new FeatureExtractor(SampleRate,NumberBlocksize);
             MyData = new float* [NumFFT];
-            MySinData = new float * [NumFFT];
+            MyPureTone = new float * [NumFFT];
             for (int i = 0 ;  i < NumFFT ; i++) {
                 MyData[i] = new float [NumberBlocksize];
-                MySinData[i] = new float [NumberBlocksize];
+                MyPureTone[i] = new float [NumberBlocksize];
                 memset(MyData[i], 0.0, sizeof(float)*NumberBlocksize);
-                CSignalGen::generateSine(MySinData[i], 20.F, SampleRate, NumberBlocksize, .7F, static_cast<float>(M_PI_2));
+                for (int j = 0 ; j < NumberBlocksize; j++) {
+                    if (i == 511) {
+                        MyPureTone[i][j] = 1.0;
+                    }
+                    else MyPureTone[i][j] = 0.0 ;
+                }
             }
             MyOutput = new float [NumberBlocksize];
             
@@ -55,12 +60,12 @@ SUITE(FeatureExtrct){
             MyTestFeatureExtractor = 0 ;
             for (int i = 0 ; i < NumFFT; i++) {
                 delete []MyData[i];
-                delete []MySinData[i];
+                delete []MyPureTone[i];
             }
             delete MyData;
-            delete MySinData;
+            delete MyPureTone;
             MyData = 0 ;
-            MySinData = 0 ;
+            MyPureTone = 0 ;
             
             delete [] MyOutput;
             MyOutput = 0 ;
@@ -70,9 +75,9 @@ SUITE(FeatureExtrct){
         const int NumberBlocksize = 1024;
         const int NumFFT = 512;
         float ** MyData;
-        float ** MySinData;
+        float ** MyPureTone;
         float * MyOutput;
-        float SampleRate = 4410;
+        float SampleRate = 1024;
         
     };
     TEST_FIXTURE(FeatureExt,ZeroInputSF)
@@ -88,6 +93,18 @@ SUITE(FeatureExtrct){
         MyTestFeatureExtractor -> destroyFeatureExtractor();
         
     }
+    TEST_FIXTURE(FeatureExt, PureToneSF)
+    {
+        std::vector<float *> results;
+        MyTestFeatureExtractor -> chooseFeature(1);
+        MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> featureExtract(MyPureTone,results, NumFFT);
+        memcpy(MyOutput, results[0], sizeof(float)*NumberBlocksize);
+        for (int i = 0 ; i < NumberBlocksize; i++) {
+            CHECK_EQUAL(0, MyOutput[i]);
+        }
+        MyTestFeatureExtractor -> destroyFeatureExtractor();
+    }
     TEST_FIXTURE(FeatureExt, ZeroInputSC){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(0);
@@ -97,6 +114,18 @@ SUITE(FeatureExtrct){
 
         for (int i = 0 ; i < NumberBlocksize; i++) {
             CHECK_EQUAL(0, MyOutput[i]);
+        }
+        MyTestFeatureExtractor -> destroyFeatureExtractor();
+    }
+    TEST_FIXTURE(FeatureExt, PureToneSC)
+    {
+        std::vector<float *> results;
+        MyTestFeatureExtractor -> chooseFeature(0);
+        MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> featureExtract(MyPureTone,results, NumFFT);
+        memcpy(MyOutput, results[0], sizeof(float)*NumberBlocksize);
+        for (int i = 0 ; i < NumberBlocksize; i++) {
+            CHECK_EQUAL(511, MyOutput[i]);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
     }

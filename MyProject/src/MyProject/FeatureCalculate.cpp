@@ -31,10 +31,10 @@ void SpectralCentroid::process(float **input, float *SC,int NumFFT)
 {
     for (int i = 0; i < Observations; i++) {
         for (int j = 0 ; j < NumFFT ; j++) {
-            input[j][i] = pow(input[j][i],2.0);
-            SumSpec[i] += input[j][i];
-            input[j][i] *= j;
-            WeightSumSpec[i] += input[j][i];
+            float tmp = pow(input[j][i],2.0);
+            SumSpec[i] += tmp;
+            tmp *= j;
+            WeightSumSpec[i] += tmp;
             
         }
         if (SumSpec[i]!=0) {
