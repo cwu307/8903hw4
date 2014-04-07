@@ -20,8 +20,7 @@
 */
 class JuceDemoPluginAudioProcessorEditor  : public AudioProcessorEditor,
                                             public SliderListener,
-                                            public Timer,
-                                            public ButtonListener
+                                            public Timer
 {
 public:
     JuceDemoPluginAudioProcessorEditor (JuceDemoPluginAudioProcessor* ownerFilter);
@@ -32,18 +31,11 @@ public:
     void paint (Graphics&) override;
     void resized() override;
     void sliderValueChanged (Slider*) override;
-    
-    
-    void buttonClicked (Button*) override;
-    bool bypass;
 
 private:
-
-    Label infoLabel, gainLabel, delayLabel, ModFreqLabel;
-    Label title;
-    Slider gainSlider, delaySlider,ModFreqSlider;
-    TextButton bypassButton;
-    
+    MidiKeyboardComponent midiKeyboard;
+    Label infoLabel, gainLabel, delayLabel;
+    Slider gainSlider, delaySlider;
     ScopedPointer<ResizableCornerComponent> resizer;
     ComponentBoundsConstrainer resizeLimits;
 

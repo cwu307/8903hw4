@@ -14,12 +14,12 @@
 //==============================================================================
 JuceDemoPluginAudioProcessorEditor::JuceDemoPluginAudioProcessorEditor (JuceDemoPluginAudioProcessor* ownerFilter)
     : AudioProcessorEditor (ownerFilter),
-      //midiKeyboard (ownerFilter->keyboardState, MidiKeyboardComponent::horizontalKeyboard),
+      midiKeyboard (ownerFilter->keyboardState, MidiKeyboardComponent::horizontalKeyboard),
       infoLabel (String::empty),
-      title("","vibrato"),
-      gainLabel ("", "Width:"),
+      gainLabel ("", "Throughput level:"),
       delayLabel ("", "Delay:"),
-      ModFreqLabel("","ModFreqency:")
+      gainSlider ("gain"),
+      delaySlider ("delay")
 {
     // add some sliders..
     addAndMakeVisible (gainSlider);
@@ -32,32 +32,19 @@ JuceDemoPluginAudioProcessorEditor::JuceDemoPluginAudioProcessorEditor (JuceDemo
     delaySlider.addListener (this);
     delaySlider.setRange (0.0, 1.0, 0.01);
 
-    addAndMakeVisible (ModFreqSlider);
-    ModFreqSlider.setSliderStyle (Slider::Rotary);
-    ModFreqSlider.addListener (this);
-    ModFreqSlider.setRange (0.0, 10.0, 0.1);
-    
-    addAndMakeVisible(bypassButton);
-    bypassButton.setButtonText("ByPass");
-    bypassButton.addListener(this);
-    bypass = false;
-    
     // add some labels for the sliders..
-    gainLabel.attachToComponent (&gainSlider, true);
+    gainLabel.attachToComponent (&gainSlider, false);
     gainLabel.setFont (Font (11.0f));
 
-    delayLabel.attachToComponent (&delaySlider, true);
+    delayLabel.attachToComponent (&delaySlider, false);
     delayLabel.setFont (Font (11.0f));
-    
-    ModFreqLabel.attachToComponent(&ModFreqSlider, true);
+
+    // add the midi keyboard component..
+    addAndMakeVisible (midiKeyboard);
 
     // add a label that will display the current timecode and status..
     addAndMakeVisible (infoLabel);
     infoLabel.setColour (Label::textColourId, Colours::blue);
-    
-    addAndMakeVisible(title);
-    title.setColour(Label::textColourId, Colours::blue);
-    title.setFont(Font(12.0f));
 
     // add the triangular resizer component for the bottom-right of the UI
     addAndMakeVisible (resizer = new ResizableCornerComponent (this, &resizeLimits));
@@ -74,23 +61,6 @@ JuceDemoPluginAudioProcessorEditor::~JuceDemoPluginAudioProcessorEditor()
 {
 }
 
-void JuceDemoPluginAudioProcessorEditor::buttonClicked (Button* button)
-{
-    if (button == &bypassButton) {
-        if (bypass) {
-            getProcessor()->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::buttonPara,
-                                                1.0F);
-            bypass = false;
-        }
-        else {
-            getProcessor()->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::buttonPara,
-                                                      0.0F);
-            bypass = true;
-        }
-        
-    }
-}
-
 //==============================================================================
 void JuceDemoPluginAudioProcessorEditor::paint (Graphics& g)
 {
@@ -102,12 +72,11 @@ void JuceDemoPluginAudioProcessorEditor::paint (Graphics& g)
 void JuceDemoPluginAudioProcessorEditor::resized()
 {
     infoLabel.setBounds (10, 4, 400, 25);
-    gainSlider.setBounds (40, 60, 140, 40);
-    delaySlider.setBounds (220, 60, 140, 40);
-    ModFreqSlider.setBounds(100, 120, 150, 40);
-    bypassButton.setBounds(250, 120, 40, 20);
-    title.setBounds(150, 20, 50, 35);
+    gainSlider.setBounds (20, 60, 150, 40);
+    delaySlider.setBounds (200, 60, 150, 40);
 
+    const int keyboardHeight = 70;
+    midiKeyboard.setBounds (4, getHeight() - keyboardHeight - 4, getWidth() - 8, keyboardHeight);
 
     resizer->setBounds (getWidth() - 16, getHeight() - 16, 16, 16);
 
@@ -121,10 +90,13 @@ void JuceDemoPluginAudioProcessorEditor::timerCallback()
 {
     JuceDemoPluginAudioProcessor* ourProcessor = getProcessor();
 
-    gainSlider.setValue (ourProcessor->gain, sendNotificationSync);
-    delaySlider.setValue (ourProcessor->delay, sendNotificationSync);
-    ModFreqSlider.setValue(ourProcessor->Modfreq,sendNotificationSync);
-    
+    AudioPlayHead::CurrentPositionInfo newPos (ourProcessor->lastPosInfo);
+
+    if (lastDisplayedPosition != newPos)
+        displayPositionInfo (newPos);
+
+    gainSlider.setValue (ourProcessor->gain, dontSendNotification);
+    delaySlider.setValue (ourProcessor->delay, dontSendNotification);
 }
 
 // This is our Slider::Listener callback, when the user drags a slider.
@@ -142,10 +114,6 @@ void JuceDemoPluginAudioProcessorEditor::sliderValueChanged (Slider* slider)
     {
         getProcessor()->setParameterNotifyingHost (JuceDemoPluginAudioProcessor::delayParam,
                                                    (float) delaySlider.getValue());
-    }
-    else if (slider == &ModFreqSlider)
-    {
-        getProcessor()->setParameterNotifyingHost(JuceDemoPluginAudioProcessor::ModFreqParam, (float)ModFreqSlider.getValue());
     }
 }
 
