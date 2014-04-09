@@ -3,8 +3,9 @@
 
 #include "ErrorDef.h"
 #include "InputBuffSrc.h"
-#include "../../SharedSources/Dsp/Fft.h"
 #include "FeatureExtractor.h"
+
+using std::vector;
 
 class CMyProject
 {
@@ -30,16 +31,15 @@ public:
     
     virtual Error_t process (float **ppfInputBuffer, float **ppfOutputBuffer, int iNumberOfFrames);
     
+    
 protected:
     CMyProject ();
     virtual ~CMyProject ();
     
     CInputBuffSrc<float> * MyInputBuff;
-    CFft ** MyFFT;
-    FeatureExtractor ** MyFeatureExtractor;
+    FeatureExtractor * MyFeatureExtractor;
     float ** OutputBuffer;
-    CFft::complex_t ** Spect;
-    float ** SpectMagnit ; 
+    vector<float *>  FeatureVector;
     
     int iNumChannal;
     int iNumFFT;

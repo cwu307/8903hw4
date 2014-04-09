@@ -33,21 +33,22 @@ SUITE(FeatureExtrct){
     struct FeatureExt{
         FeatureExt()
         {
-            MyTestFeatureExtractor = new FeatureExtractor(SampleRate,NumberBlocksize);
-            MyData = new float* [NumFFT];
-            MyPureTone = new float * [NumFFT];
-            for (int i = 0 ;  i < NumFFT ; i++) {
-                MyData[i] = new float [NumberBlocksize];
-                MyPureTone[i] = new float [NumberBlocksize];
-                memset(MyData[i], 0.0, sizeof(float)*NumberBlocksize);
-                for (int j = 0 ; j < NumberBlocksize; j++) {
-                    if (i == 511) {
+            MyTestFeatureExtractor = new FeatureExtractor(SampleRate,NumFFT,iNumChannel);
+            MyTestFeatureExtractor -> setTest();
+            MyData = new float* [iNumChannel];
+            MyPureTone = new float * [iNumChannel];
+            for (int i = 0 ;  i < iNumChannel ; i++) {
+                MyData[i] = new float [NumFFT];
+                MyPureTone[i] = new float [NumFFT];
+                memset(MyData[i], 0.0, sizeof(float)*NumFFT);
+                for (int j = 0 ; j < NumFFT; j++) {
+                    if (j == 511) {
                         MyPureTone[i][j] = 1.0;
                     }
                     else MyPureTone[i][j] = 0.0 ;
                 }
             }
-            MyOutput = new float [NumberBlocksize];
+            MyOutput = new float [iNumChannel];
             
             
             
@@ -58,7 +59,7 @@ SUITE(FeatureExtrct){
             //MyTestFeatureExtractor -> destroyFeatureExtractor();
             delete MyTestFeatureExtractor;
             MyTestFeatureExtractor = 0 ;
-            for (int i = 0 ; i < NumFFT; i++) {
+            for (int i = 0 ; i < iNumChannel; i++) {
                 delete []MyData[i];
                 delete []MyPureTone[i];
             }
@@ -72,7 +73,7 @@ SUITE(FeatureExtrct){
         }
         
         FeatureExtractor * MyTestFeatureExtractor;
-        const int NumberBlocksize = 1024;
+        const int iNumChannel = 2;
         const int NumFFT = 512;
         float ** MyData;
         float ** MyPureTone;
@@ -85,10 +86,10 @@ SUITE(FeatureExtrct){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(1);
         MyTestFeatureExtractor -> initFeatureExtractor();
-        MyTestFeatureExtractor -> featureExtract(MyData,results, NumFFT);
-        memcpy(MyOutput, results[0], sizeof(float)*NumberBlocksize);
-        for (int i = 0 ; i < NumberBlocksize; i++) {
-            CHECK_EQUAL(0, MyOutput[i]);
+        MyTestFeatureExtractor -> featureExtract(MyData,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            CHECK_CLOSE(0, MyOutput[i], 0.01);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
         
@@ -98,10 +99,10 @@ SUITE(FeatureExtrct){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(1);
         MyTestFeatureExtractor -> initFeatureExtractor();
-        MyTestFeatureExtractor -> featureExtract(MyPureTone,results, NumFFT);
-        memcpy(MyOutput, results[0], sizeof(float)*NumberBlocksize);
-        for (int i = 0 ; i < NumberBlocksize; i++) {
-            CHECK_EQUAL(0, MyOutput[i]);
+        MyTestFeatureExtractor -> featureExtract(MyPureTone,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            CHECK_CLOSE(0, MyOutput[i], 0.01);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
     }
@@ -109,10 +110,10 @@ SUITE(FeatureExtrct){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(0);
         MyTestFeatureExtractor -> initFeatureExtractor();
-        MyTestFeatureExtractor -> featureExtract(MyData,results, NumFFT);
-        memcpy(MyOutput, results[0], sizeof(float)*NumberBlocksize);
+        MyTestFeatureExtractor -> featureExtract(MyData,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
 
-        for (int i = 0 ; i < NumberBlocksize; i++) {
+        for (int i = 0 ; i < iNumChannel; i++) {
             CHECK_EQUAL(0, MyOutput[i]);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
@@ -122,10 +123,10 @@ SUITE(FeatureExtrct){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(0);
         MyTestFeatureExtractor -> initFeatureExtractor();
-        MyTestFeatureExtractor -> featureExtract(MyPureTone,results, NumFFT);
-        memcpy(MyOutput, results[0], sizeof(float)*NumberBlocksize);
-        for (int i = 0 ; i < NumberBlocksize; i++) {
-            CHECK_EQUAL(511, MyOutput[i]);
+        MyTestFeatureExtractor -> featureExtract(MyPureTone,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            CHECK_CLOSE(511, MyOutput[i], 0.1);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
     }

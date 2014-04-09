@@ -10,28 +10,14 @@
 #include <cmath>
 
 
-void SpectralCentroid::setParameter(int NumBlocksize)
-{
-    SumSpec = new float [NumBlocksize];
-    memset(SumSpec, 0.0, sizeof(float)*NumBlocksize);
-    WeightSumSpec = new float [NumBlocksize];
-    memset(WeightSumSpec, 0.0, sizeof(float)*NumBlocksize);
-    Observations = NumBlocksize;
-}
 
-void     SpectralCentroid::reset()
+void SpectralCentroid::process(float **input, float *SC)
 {
-    delete []SumSpec;
-    delete []WeightSumSpec;
-    WeightSumSpec = 0;
-    SumSpec = 0;
-}
-
-void SpectralCentroid::process(float **input, float *SC,int NumFFT)
-{
-    for (int i = 0; i < Observations; i++) {
+    memset(SumSpec, 0.0, sizeof(float)*iNumChannel);
+    memset(WeightSumSpec, 0.0, sizeof(float)*iNumChannel);
+    for (int i = 0; i < iNumChannel; i++) {
         for (int j = 0 ; j < NumFFT ; j++) {
-            float tmp = pow(input[j][i],2.0);
+            float tmp = pow(input[i][j],2.0);
             SumSpec[i] += tmp;
             tmp *= j;
             WeightSumSpec[i] += tmp;
@@ -48,25 +34,22 @@ void SpectralCentroid::process(float **input, float *SC,int NumFFT)
     }
 }
 
-
-
-void SpectralFlux::setParameter(int NumBlocksize)
+void SpectralFlux::process(float ** input, float * SC)
 {
-    Observations = NumBlocksize;
+    memset(SC, 0.0, sizeof(float)*iNumChannel);
+    for(int i = 0 ; i < iNumChannel; i ++){
+        for (int j = 0 ; j < NumFFT ; j++) {
+            SC[i] += pow((input[i][j] - PreSpect[i][j]),2.0);
+            float s = SC[i];
+            PreSpect[i][j] = input[i][j];
+            SC[i] = sqrtf(SC[i])/NumFFT;
+        }
+    }
 }
 
-void SpectralFlux::process(float ** input, float * SC,int NumFFT)
+void SpectralFlux::reset()
 {
-    memset(SC, 0, sizeof(float)*Observations);
-    for(int i = 0 ; i < Observations; i ++){
-        for (int j = 0 ; j < NumFFT ; j++) {
-            if (i == 0) {
-                SC[i-1] = 0;
-            }
-            else{
-                SC[i] += pow(input[j][i] - input[j][i-1],2.0);
-                SC[i] = sqrtf(SC[i])/NumFFT;
-            }
-        }
+    for (int i = 0 ; i < iNumChannel; i++) {
+        memset(PreSpect[i], 0.0, sizeof(float)*NumFFT);
     }
 }

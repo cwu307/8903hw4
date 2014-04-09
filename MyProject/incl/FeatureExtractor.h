@@ -14,6 +14,8 @@
 #include <vector>
 
 #include "FeatureCalculate.h"
+#include "../../SharedSources/Dsp/Fft.h"
+
 //class SpectralCentroid;
 //class SpectralFlux;
 
@@ -21,16 +23,41 @@ using  std::string;
 
 class FeatureExtractor{
 public:
-    FeatureExtractor(int samplerate, int blocksize):SampleRate(samplerate),NumBlocksize(blocksize),SC(false),SF(false),ZC(false),SR(false){};
+    FeatureExtractor(int samplerate, int blocksize, int numChannel):SampleRate(samplerate),iNumFFT(blocksize),iNumChannel(numChannel), SC(false),SF(false),ZC(false),SR(false),test(false){
+        MyFFT = new CFft * [iNumChannel];
+        Spectrum = new CFft::complex_t *[iNumChannel];
+        FFTMag = new float * [iNumChannel];
+        for (int i = 0 ; i < iNumChannel; i++) {
+            CFft::createInstance(MyFFT[i]);
+            MyFFT[i] -> initInstance(iNumFFT,0);
+            Spectrum[i] = new CFft::complex_t[iNumFFT];
+            FFTMag[i] = new float[iNumFFT];
+        }
+    }
     
-    ~FeatureExtractor(){};
+    ~FeatureExtractor(){
+        for (int i = 0 ; i < iNumChannel; i++) {
+            delete [] Spectrum[i];
+            delete [] FFTMag[i];
+            CFft::destroyInstance(MyFFT[i]);
+        }
+        delete Spectrum;
+        delete FFTMag;
+        delete MyFFT;
+        
+    }
     
     void  initFeatureExtractor();
+    
     void destroyFeatureExtractor();
     
     void chooseFeature(int index);
     
-    void featureExtract(float ** input, std::vector<float*> &output, int fft);
+    string getChosenFeatures() const  ;
+    
+    void setTest();
+    
+    void featureExtract(float ** input, std::vector<float*> &output);
     
     void reset();
     enum FeatureType{
@@ -45,10 +72,16 @@ private:
     float TakeMean(float * input);
     
     float SampleRate;
-    int NumBlocksize;
+    int iNumFFT;
+    int iNumChannel;
     
     SpectralCentroid * MySC;
     SpectralFlux * MySF;
+    
+    CFft ** MyFFT;
+    CFft::complex_t ** Spectrum;
+    float ** FFTMag;
+    
     float * SCOutput;
     float * SFOutput;
     float * SROutput;
@@ -58,6 +91,8 @@ private:
     bool SF;
     bool ZC;
     bool SR;
+    
+    bool test;
     
 };
 

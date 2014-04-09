@@ -33,15 +33,12 @@ void FeatureExtractor::chooseFeature(int index)
 void FeatureExtractor::initFeatureExtractor()
 {
     if (SF) {
-        MySF = new SpectralFlux();
-        MySF -> setParameter(NumBlocksize);
-        SFOutput = new float[NumBlocksize];
-        
+        MySF = new SpectralFlux(iNumChannel,iNumFFT);
+        SFOutput = new float[iNumChannel];
     }
     if (SC) {
-        MySC = new SpectralCentroid(SampleRate);
-        MySC -> setParameter(NumBlocksize);
-        SCOutput = new float[NumBlocksize];
+        MySC = new SpectralCentroid(SampleRate,iNumChannel,iNumFFT);
+        SCOutput = new float[iNumChannel];
     }
     if (ZC) {
         
@@ -62,7 +59,6 @@ void FeatureExtractor::destroyFeatureExtractor()
         
     }
     if (SC) {
-        MySC -> reset();
         delete MySC;
         MySC = 0;
         delete []SCOutput;
@@ -77,38 +73,63 @@ void FeatureExtractor::destroyFeatureExtractor()
     }
 }
 
-void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & output, int Num)
+string FeatureExtractor::getChosenFeatures() const
 {
-    if (SC) {
-        MySC -> process(input, SCOutput, Num);
-        //float result = TakeMean(SCOutput);
-        output.push_back(SCOutput);
-    }
-    if (SF) {
-        MySF -> process(input, SFOutput, Num);
-        //float result = TakeMean(SFOutput);
-        output.push_back(SFOutput);
-    }
-    if (ZC) {
-        
-    }
-    if (SR) {
-        
-    }
+    
 }
 
-
-float FeatureExtractor::TakeMean(float *input)
+void FeatureExtractor::setTest()
 {
-    float sum = 0 ;
-    for (int i = 0 ; i < NumBlocksize; i++) {
-        sum += input[i];
-    }
-    sum /= NumBlocksize;
-    return sum;
+    test = true;
 }
+void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & output)
+{
+    if (!test) {
+        if (SF || SC || SR) {
+            for (int i = 0 ; i < iNumChannel; i++) {
+                MyFFT[i] -> doFft(Spectrum[i], input[i]);
+                MyFFT[i] -> getMagnitude(FFTMag[i], Spectrum[i]);
+                
+            }
+        }
+        if (SC) {
+            //        for (int i = 0 ; i < iNumFFT; i++) {
+            //            std::cout<<FFTMag[0][i]<<std::endl;
+            //        }
+            MySC -> process(FFTMag, SCOutput);
+            output.push_back(SCOutput);
+        }
+        if (SF) {
+            MySF -> process(FFTMag, SFOutput);
+            output.push_back(SFOutput);
+        }
+        if (ZC) {
+            
+        }
+        if (SR) {
+            
+        }
 
+    }
+    else {
+        if (SC) {
+            MySC -> process(input, SCOutput);
+            output.push_back(SCOutput);
+        }
+        if (SF) {
+            MySF -> process(input, SFOutput);
+            output.push_back(SFOutput);
+        }
+        if (ZC) {
+            
+        }
+        if (SR) {
+            
+        }
 
+    }
+    
+}
 
 void  FeatureExtractor::reset()
 {
@@ -116,6 +137,10 @@ void  FeatureExtractor::reset()
     SF = false;
     SR = false;
     ZC = false;
+    for (int i = 0 ; i < iNumChannel; i++) {
+        MyFFT[i] -> resetInstance();
+    }
+    MySF -> reset();
 }
 
 
