@@ -108,11 +108,12 @@ Error_t CMyProject::process(float **ppfInputBuffer, float **ppfOutputBuffer, int
 {
     MyInputBuff -> setDataPtr2Hold(ppfInputBuffer, iNumberOfFrames);
     vector<float* > tmp;
-    while (MyInputBuff -> getBlock(OutputBuffer, iNumFFT)) {
+    while (MyInputBuff -> getBlock(OutputBuffer, iNumFFT))
+    {
         
         MyFeatureExtractor -> featureExtract(OutputBuffer, FeatureVector);
         
     }
     MyInputBuff -> releaseDataPtr();
-    
+    MyInputBuff -> flush(OutputBuffer);
 }

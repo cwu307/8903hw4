@@ -29,12 +29,12 @@ SUITE(MyProject)
     }
 }
 
-SUITE(FeatureExtrct){
+SUITE(FeatureExtract){
     struct FeatureExt{
-        FeatureExt()
+        FeatureExt():iNumChannel(2), NumFFT(512), SampleRate(1024)
         {
             MyTestFeatureExtractor = new FeatureExtractor(SampleRate,NumFFT,iNumChannel);
-            MyTestFeatureExtractor -> setTest();
+            MyTestFeatureExtractor -> setTest(true);
             MyData = new float* [iNumChannel];
             MyPureTone = new float * [iNumChannel];
             for (int i = 0 ;  i < iNumChannel ; i++) {
@@ -73,12 +73,12 @@ SUITE(FeatureExtrct){
         }
         
         FeatureExtractor * MyTestFeatureExtractor;
-        const int iNumChannel = 2;
-        const int NumFFT = 512;
+        const int iNumChannel;
+        const int NumFFT;
         float ** MyData;
         float ** MyPureTone;
         float * MyOutput;
-        float SampleRate = 1024;
+        float SampleRate;
         
     };
     TEST_FIXTURE(FeatureExt,ZeroInputSF)
@@ -130,6 +130,94 @@ SUITE(FeatureExtrct){
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
     }
+    
+    
+    
+    //=============spectral rolloff + zero crossing tests
+    TEST_FIXTURE(FeatureExt, ZeroInputSR)
+    {
+        std::vector<float *> results;
+        MyTestFeatureExtractor -> chooseFeature(2);
+        MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> setTest(true);
+        MyTestFeatureExtractor -> featureExtract(MyData,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            //CHECK_CLOSE(0, MyOutput[i], 0.01);
+            CHECK_EQUAL(0, MyOutput[i]);
+        }
+        MyTestFeatureExtractor -> destroyFeatureExtractor();
+        
+    }
+    
+    TEST_FIXTURE(FeatureExt, DCinputSR)
+    {
+        std::vector<float *> results;
+        MyTestFeatureExtractor -> chooseFeature(2);
+        MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> setTest(true);
+        float **myTestSig;
+        myTestSig = new float* [iNumChannel];
+        for (int c = 0; c < iNumChannel; c++)
+        {
+            myTestSig[c] = new float [NumFFT];
+            CSignalGen::generateDc(myTestSig[c], NumFFT);
+        }
+        
+        MyTestFeatureExtractor -> featureExtract(myTestSig,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            //default kappa = 0.85
+            CHECK_EQUAL( (int)(0.85 * (SampleRate/2)),  MyOutput[i]);
+        }
+        MyTestFeatureExtractor -> destroyFeatureExtractor();
+        
+    }
+    
+    
+    TEST_FIXTURE(FeatureExt, ZeroInputZC)
+    {
+        std::vector<float *> results;
+        MyTestFeatureExtractor -> chooseFeature(3);
+        MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> setTest(false);
+        MyTestFeatureExtractor -> featureExtract(MyData,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            //CHECK_CLOSE(0, MyOutput[i], 0.01);
+            CHECK_EQUAL(0, MyOutput[i]);
+        }
+        MyTestFeatureExtractor -> destroyFeatureExtractor();
+        
+    }
+    
+    TEST_FIXTURE(FeatureExt, oneAlterZC)
+    {
+        std::vector<float *> results;
+        MyTestFeatureExtractor -> chooseFeature(3);
+        MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> setTest(false);
+        float **myTestSig;
+        myTestSig = new float* [iNumChannel];
+        for (int c = 0; c < iNumChannel; c++)
+        {
+            myTestSig[c] = new float [NumFFT];
+            memset(myTestSig[c], 0.0, sizeof(float)*NumFFT);
+            myTestSig[c][0] = 1;
+            myTestSig[c][1] = -1;
+        }
+        
+        
+        MyTestFeatureExtractor -> featureExtract(myTestSig,results);
+        memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
+        for (int i = 0 ; i < iNumChannel; i++) {
+            //CHECK_CLOSE(0, MyOutput[i], 0.01);
+            CHECK_EQUAL(1/NumFFT, MyOutput[i]);
+        }
+        MyTestFeatureExtractor -> destroyFeatureExtractor();
+        
+    }
+
     
 }
 

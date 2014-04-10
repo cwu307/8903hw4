@@ -29,7 +29,7 @@ public:
         FFTMag = new float * [iNumChannel];
         for (int i = 0 ; i < iNumChannel; i++) {
             CFft::createInstance(MyFFT[i]);
-            MyFFT[i] -> initInstance(iNumFFT,0);
+            MyFFT[i] -> initInstance(iNumFFT,1);
             Spectrum[i] = new CFft::complex_t[iNumFFT];
             FFTMag[i] = new float[iNumFFT];
         }
@@ -55,11 +55,12 @@ public:
     
     string getChosenFeatures() const  ;
     
-    void setTest();
+    void setTest(bool testStatus);
     
     void featureExtract(float ** input, std::vector<float*> &output);
     
     void reset();
+    
     enum FeatureType{
         SpectCent = 0 ,
         SpectFlux,
@@ -75,8 +76,10 @@ private:
     int iNumFFT;
     int iNumChannel;
     
+    MyZeroCrossing * MyZC;
     SpectralCentroid * MySC;
     SpectralFlux * MySF;
+    SpectralRolloff *MySR;
     
     CFft ** MyFFT;
     CFft::complex_t ** Spectrum;

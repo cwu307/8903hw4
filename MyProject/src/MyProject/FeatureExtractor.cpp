@@ -41,10 +41,12 @@ void FeatureExtractor::initFeatureExtractor()
         SCOutput = new float[iNumChannel];
     }
     if (ZC) {
-        
+        MyZC = new MyZeroCrossing(SampleRate, iNumChannel, iNumFFT);
+        ZCOutput = new float [iNumChannel];
     }
     if (SR) {
-        
+        MySR = new SpectralRolloff(SampleRate, iNumChannel, iNumFFT);
+        SROutput = new float [iNumChannel];
     }
     
 }
@@ -66,21 +68,50 @@ void FeatureExtractor::destroyFeatureExtractor()
         SC = false;
     }
     if (ZC) {
-        
+        delete MyZC;
+        MyZC = 0;
+        delete [] ZCOutput;
+        ZCOutput = 0;
+        ZC = false;
     }
     if (SR) {
-        
+        delete MySR;
+        MySR = 0;
+        delete [] SROutput;
+        SROutput = 0;
+        SR = false;
     }
 }
 
 string FeatureExtractor::getChosenFeatures() const
 {
+    std::string allFeatures;
+    if (SC)
+    {
+        allFeatures = allFeatures + std::string(" Spectral Centroid");
+    }
+    else if (SF)
+    {
+        allFeatures = allFeatures + std::string(" Spectral Flux");
+    }
+    else if (SR)
+    {
+        allFeatures = allFeatures + std::string(" Spectral Rolloff");
+    }
+    else if (ZC)
+    {
+        allFeatures = allFeatures + std::string(" Zero Crossing");
+    }
     
+    return allFeatures;
 }
 
-void FeatureExtractor::setTest()
+
+void FeatureExtractor::setTest(bool testStatus)
 {
-    test = true;
+    //if test = true, treat input as spectrum
+    //if test = false, treat input as time-domain signal
+    test = testStatus;
 }
 void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & output)
 {
@@ -104,10 +135,12 @@ void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & out
             output.push_back(SFOutput);
         }
         if (ZC) {
-            
+            MyZC -> process(input, ZCOutput);
+            output.push_back(ZCOutput);
         }
         if (SR) {
-            
+            MySR -> process(FFTMag, SROutput);
+            output.push_back(SROutput);
         }
 
     }
@@ -121,10 +154,12 @@ void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & out
             output.push_back(SFOutput);
         }
         if (ZC) {
-            
+            MyZC -> process(input, ZCOutput);
+            output.push_back(ZCOutput);
         }
         if (SR) {
-            
+            MySR -> process(input, SROutput);
+            output.push_back(SROutput);
         }
 
     }

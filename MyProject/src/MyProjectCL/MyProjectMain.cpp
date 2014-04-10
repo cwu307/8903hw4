@@ -42,10 +42,13 @@ int main(int argc, char* argv[])
 
     float                   **ppfAudioData  = 0;
     static const int        kBlockSize      = 1024;
-
+    int                     iNumFFT         = 1024;
+    
+    
     CAudioFileIf            *phInputFile    = 0;
     std::fstream            hOutputFile;
     CAudioFileIf::FileSpec_t stFileSpec;
+    CMyProject              *phMyProject = 0;
 
     // detect memory leaks in win32
 #if (defined(WITH_MEMORYCHECK) && !defined(NDEBUG) && defined (GTCMT_WIN32))
@@ -67,6 +70,7 @@ int main(int argc, char* argv[])
     // parse command line arguments
     getClArgs (sInputFilePath, sOutputFilePath, argc, argv);
 
+    
     // open the input wave file
     CAudioFileIf::createInstance(phInputFile);
     phInputFile->openFile(sInputFilePath, CAudioFileIf::kFileRead);
@@ -89,7 +93,10 @@ int main(int argc, char* argv[])
     ppfAudioData            = new float* [stFileSpec.iNumChannels];
     for (int i = 0; i < stFileSpec.iNumChannels; i++)
         ppfAudioData[i] = new float [kBlockSize];
-
+    
+    CMyProject::createInstance(phMyProject);
+    phMyProject->initInstance(iNumFFT, kBlockSize, stFileSpec.fSampleRateInHz);
+    
     // read wave
     while (!phInputFile->isEof())
     {
@@ -100,6 +107,8 @@ int main(int argc, char* argv[])
         {
             for (int c = 0; c < stFileSpec.iNumChannels; c++)
             {
+                phMyProject->process(ppfAudioData, ppfAudioData, iNumFrames);
+                
                 hOutputFile << ppfAudioData[c][i] << "\t";
             }
             hOutputFile << endl;
@@ -110,6 +119,7 @@ int main(int argc, char* argv[])
     // close the files
     CAudioFileIf::destroyInstance(phInputFile);
     hOutputFile.close();
+    CMyProject::destroyInstance(phMyProject);
 
     // free memory
     for (int i = 0; i < stFileSpec.iNumChannels; i++)
