@@ -19,9 +19,9 @@ noverlap = windowSize - hopSize;
 yTimeL = x2mat(yLeft, windowSize, hopSize);
 yTimeR = x2mat(yRight, windowSize, hopSize);
 
-% 
-% SL = spectrogram(yLeft, windowSize, noverlap, windowSize, fs);
-% SR = spectrogram(yRight, windowSize, noverlap, windowSize, fs);
+
+SL = spectrogram(yLeft, windowSize, noverlap, windowSize, fs);
+SR = spectrogram(yRight, windowSize, noverlap, windowSize, fs);
 
 
 [m, n] = size(yTimeL);
@@ -30,16 +30,15 @@ matlabResults = [];
 
 tmpResult = zeros(4, 2);
 for i = 1:n
+    %time domain block
     currentFrameL = yTimeL(:, i);
     currentFrameR = yTimeR(:, i);
     
-    %order: SC, SF, ZC, SR
-    currentSpecL = fft(currentFrameL);
-    currentSpecR = fft(currentFrameR);
-%     currentSpecL = SL(:, i);
-%     currentSpecR = SR(:, i);
-    
-    %extract features
+    %frequency domain block
+    currentSpecL = SL(:, i);
+    currentSpecR = SR(:, i);
+            
+    %extract features 
     [vscL] = FeatureSpectralCentroid(abs(currentSpecL), fs);
     [vscR] = FeatureSpectralCentroid(abs(currentSpecR), fs);
     
@@ -52,6 +51,7 @@ for i = 1:n
     [vsrL] = FeatureSpectralRolloff(abs(currentSpecL), fs, 0.85);
     [vsrR] = FeatureSpectralRolloff(abs(currentSpecR), fs, 0.85);
     
+    %order: SC, SF, ZC, SR 
     tmpResult(1, 1) = vscL;
     tmpResult(1, 2) = vscR;
     tmpResult(2, 1) = vsfL;
@@ -62,6 +62,11 @@ for i = 1:n
     tmpResult(4, 2) = vsrR;
     
     matlabResults = [matlabResults; tmpResult];
-   
-    
+      
 end
+
+%err = cppResults(1:size(matlabResults,1), :) - matlabResults(:,:);
+%meanErr = mean(err, 2);
+
+fprintf('Please check "matlabResults" and "cppResults" in the workspace\n');
+

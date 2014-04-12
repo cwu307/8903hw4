@@ -40,7 +40,6 @@ void SpectralFlux::process(float ** input, float * SC)
     for(int i = 0 ; i < iNumChannel; i ++){
         for (int j = 0 ; j < NumFFT ; j++) {
             SC[i] += pow((input[i][j] - PreSpect[i][j]),2.0);
-            float s = SC[i];
             PreSpect[i][j] = input[i][j];
             SC[i] = sqrtf(SC[i])/NumFFT;
         }

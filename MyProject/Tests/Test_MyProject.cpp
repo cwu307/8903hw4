@@ -49,9 +49,6 @@ SUITE(FeatureExtract){
                 }
             }
             MyOutput = new float [iNumChannel];
-            
-            
-            
         }
         
         ~FeatureExt()
@@ -99,7 +96,15 @@ SUITE(FeatureExtract){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(1);
         MyTestFeatureExtractor -> initFeatureExtractor();
-        MyTestFeatureExtractor -> featureExtract(MyPureTone,results);
+        MyTestFeatureExtractor -> setTest(false);
+        float **myTestSig;
+        myTestSig = new float* [iNumChannel];
+        for (int c = 0; c < iNumChannel; c++)
+        {
+            myTestSig[c] = new float [2 * NumFFT];
+            CSignalGen::generateSine(myTestSig[c], 511, SampleRate, 2* NumFFT);
+        }
+        MyTestFeatureExtractor -> featureExtract(myTestSig,results);
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
         for (int i = 0 ; i < iNumChannel; i++) {
             CHECK_CLOSE(0, MyOutput[i], 0.01);
@@ -130,7 +135,6 @@ SUITE(FeatureExtract){
         {
             myTestSig[c] = new float [NumFFT];
             CSignalGen::generateSine(myTestSig[c], 511, SampleRate, NumFFT);
-            //myTestSig[c][0] = 1;
         }
         
         MyTestFeatureExtractor -> featureExtract(myTestSig,results);
@@ -167,13 +171,6 @@ SUITE(FeatureExtract){
         MyTestFeatureExtractor -> initFeatureExtractor();
         MyTestFeatureExtractor -> setTest(true);
         float **myTestSig;
-//        myTestSig = new float* [iNumChannel];
-//        for (int c = 0; c < iNumChannel; c++)
-//        {
-//            myTestSig[c] = new float [NumFFT];
-//            CSignalGen::generateDc(myTestSig[c], NumFFT, 0.0);
-//            myTestSig[c][1023] = 1;
-//        }
         
         myTestSig = new float* [iNumChannel];
         for (int c = 0; c < iNumChannel; c++)
@@ -186,18 +183,11 @@ SUITE(FeatureExtract){
             }
         }
         
-               
-//        for (int c = 0; c < iNumChannel; c++)
-//        {
-//            myTestSig[c] = new float [NumFFT];
-//            CSignalGen::generateSine(myTestSig[c], 256, SampleRate, NumFFT);
-//        }
-        
         MyTestFeatureExtractor -> featureExtract(myTestSig,results);
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
         for (int i = 0 ; i < iNumChannel; i++) {
             //compare with answer from matlab
-            CHECK_CLOSE( 20333 ,  MyOutput[i], 0.01);
+            CHECK_CLOSE( 20333 ,  MyOutput[i], 5);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
         

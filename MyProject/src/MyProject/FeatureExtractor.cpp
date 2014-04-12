@@ -40,13 +40,13 @@ void FeatureExtractor::initFeatureExtractor()
         MySC = new SpectralCentroid(SampleRate,iNumChannel,iMagLength);
         SCOutput = new float[iNumChannel];
     }
-    if (ZC) {
-        MyZC = new MyZeroCrossing(SampleRate, iNumChannel, iNumFFT);
-        ZCOutput = new float [iNumChannel];
-    }
     if (SR) {
         MySR = new SpectralRolloff(SampleRate, iNumChannel, iMagLength);
         SROutput = new float [iNumChannel];
+    }
+    if (ZC) {
+        MyZC = new MyZeroCrossing(SampleRate, iNumChannel, iNumFFT);
+        ZCOutput = new float [iNumChannel];
     }
     
 }
@@ -57,8 +57,7 @@ void FeatureExtractor::destroyFeatureExtractor()
         MySF = 0 ;
         delete []SFOutput;
         SFOutput = 0;
-        SF = false;
-        
+        SF = false;        
     }
     if (SC) {
         delete MySC;
@@ -67,19 +66,19 @@ void FeatureExtractor::destroyFeatureExtractor()
         SCOutput = 0;
         SC = false;
     }
-    if (ZC) {
-        delete MyZC;
-        MyZC = 0;
-        delete [] ZCOutput;
-        ZCOutput = 0;
-        ZC = false;
-    }
     if (SR) {
         delete MySR;
         MySR = 0;
         delete [] SROutput;
         SROutput = 0;
         SR = false;
+    }
+    if (ZC) {
+        delete MyZC;
+        MyZC = 0;
+        delete [] ZCOutput;
+        ZCOutput = 0;
+        ZC = false;
     }
 }
 
@@ -134,13 +133,13 @@ void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & out
             MySF -> process(FFTMag, SFOutput);
             output.push_back(SFOutput);
         }
-        if (ZC) {
-            MyZC -> process(input, ZCOutput);
-            output.push_back(ZCOutput);
-        }
         if (SR) {
             MySR -> process(FFTMag, SROutput);
             output.push_back(SROutput);
+        }
+        if (ZC) {
+            MyZC -> process(input, ZCOutput);
+            output.push_back(ZCOutput);
         }
 
     }
@@ -153,13 +152,13 @@ void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & out
             MySF -> process(input, SFOutput);
             output.push_back(SFOutput);
         }
-        if (ZC) {
-            MyZC -> process(input, ZCOutput);
-            output.push_back(ZCOutput);
-        }
         if (SR) {
             MySR -> process(input, SROutput);
             output.push_back(SROutput);
+        }
+        if (ZC) {
+            MyZC -> process(input, ZCOutput);
+            output.push_back(ZCOutput);
         }
 
     }
