@@ -123,6 +123,7 @@ SUITE(FeatureExtract){
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(0);
         MyTestFeatureExtractor -> initFeatureExtractor();
+        MyTestFeatureExtractor -> setTest(true);
         MyTestFeatureExtractor -> featureExtract(MyPureTone,results);
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
         for (int i = 0 ; i < iNumChannel; i++) {
@@ -161,8 +162,10 @@ SUITE(FeatureExtract){
         for (int c = 0; c < iNumChannel; c++)
         {
             myTestSig[c] = new float [NumFFT];
-            CSignalGen::generateDc(myTestSig[c], NumFFT);
+            CSignalGen::generateDc(myTestSig[c], NumFFT, 1.0);
+            //myTestSig[c][0] = 1;
         }
+        
         
         MyTestFeatureExtractor -> featureExtract(myTestSig,results);
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);

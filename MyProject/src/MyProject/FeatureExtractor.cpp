@@ -33,11 +33,11 @@ void FeatureExtractor::chooseFeature(int index)
 void FeatureExtractor::initFeatureExtractor()
 {
     if (SF) {
-        MySF = new SpectralFlux(iNumChannel,iNumFFT);
+        MySF = new SpectralFlux(iNumChannel,iMagLength);
         SFOutput = new float[iNumChannel];
     }
     if (SC) {
-        MySC = new SpectralCentroid(SampleRate,iNumChannel,iNumFFT);
+        MySC = new SpectralCentroid(SampleRate,iNumChannel,iMagLength);
         SCOutput = new float[iNumChannel];
     }
     if (ZC) {
@@ -45,7 +45,7 @@ void FeatureExtractor::initFeatureExtractor()
         ZCOutput = new float [iNumChannel];
     }
     if (SR) {
-        MySR = new SpectralRolloff(SampleRate, iNumChannel, iNumFFT);
+        MySR = new SpectralRolloff(SampleRate, iNumChannel, iMagLength);
         SROutput = new float [iNumChannel];
     }
     
@@ -121,7 +121,6 @@ void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & out
             for (int i = 0 ; i < iNumChannel; i++) {
                 MyFFT[i] -> doFft(Spectrum[i], input[i]);
                 MyFFT[i] -> getMagnitude(FFTMag[i], Spectrum[i]);
-                
             }
         }
         if (SC) {

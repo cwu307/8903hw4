@@ -30,8 +30,10 @@ public:
         for (int i = 0 ; i < iNumChannel; i++) {
             CFft::createInstance(MyFFT[i]);
             MyFFT[i] -> initInstance(iNumFFT,1);
-            Spectrum[i] = new CFft::complex_t[iNumFFT];
-            FFTMag[i] = new float[iNumFFT];
+            iMagLength = MyFFT[i] -> getLength(CFft::kLengthMagnitude);
+            iSpecLength = MyFFT[i] -> getLength(CFft::kLengthFft);
+            Spectrum[i] = new CFft::complex_t[iSpecLength];
+            FFTMag[i] = new float[iMagLength];
         }
     }
     
@@ -41,9 +43,9 @@ public:
             delete [] FFTMag[i];
             CFft::destroyInstance(MyFFT[i]);
         }
-//        delete [] Spectrum;
-//        delete [] FFTMag;
-//        delete [] MyFFT;
+        delete [] Spectrum;
+        delete [] FFTMag;
+        delete [] MyFFT;
         
     }
     
@@ -77,6 +79,8 @@ private:
     float SampleRate;
     int iNumFFT;
     int iNumChannel;
+    int iMagLength;
+    int iSpecLength;
     
     MyZeroCrossing * MyZC;
     SpectralCentroid * MySC;
