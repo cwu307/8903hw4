@@ -89,7 +89,7 @@ SUITE(FeatureExtract){
         MyTestFeatureExtractor -> featureExtract(MyData,results);
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
         for (int i = 0 ; i < iNumChannel; i++) {
-            CHECK_CLOSE(0, MyOutput[i], 0.01);
+            CHECK_CLOSE(0, MyOutput[i], 0.001);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
         

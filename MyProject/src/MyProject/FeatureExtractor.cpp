@@ -90,15 +90,15 @@ string FeatureExtractor::getChosenFeatures() const
     {
         allFeatures = allFeatures + std::string(" Spectral Centroid");
     }
-    else if (SF)
+    if (SF)
     {
         allFeatures = allFeatures + std::string(" Spectral Flux");
     }
-    else if (SR)
+    if (SR)
     {
         allFeatures = allFeatures + std::string(" Spectral Rolloff");
     }
-    else if (ZC)
+    if (ZC)
     {
         allFeatures = allFeatures + std::string(" Zero Crossing");
     }
@@ -113,6 +113,7 @@ void FeatureExtractor::setTest(bool testStatus)
     //if test = false, treat input as time-domain signal
     test = testStatus;
 }
+
 void  FeatureExtractor::featureExtract(float **input, std::vector<float *> & output)
 {
     if (!test) {
@@ -179,7 +180,27 @@ void  FeatureExtractor::reset()
 }
 
 
-
+int FeatureExtractor::getChosenFeatureNum()
+{
+    int count = 0;
+    if (SF) {
+        count++;
+    }
+    if (SC)
+    {
+        count++;
+    }
+    if (SR)
+    {
+        count++;
+    }
+    if (ZC)
+    {
+        count++;
+    }
+    
+    return count;
+}
 
 
 

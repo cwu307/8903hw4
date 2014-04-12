@@ -31,20 +31,25 @@ public:
     
     virtual Error_t process (float **ppfInputBuffer, float **ppfOutputBuffer, int iNumberOfFrames);
     
+    void getSizeOfResult(float *pfSizeOfResult, int iNumOfFrames);
+    void getResult(float **ppfResults);
+    
     
 protected:
+    
     CMyProject ();
     virtual ~CMyProject ();
     
     CInputBuffSrc<float> * MyInputBuff;
     FeatureExtractor * MyFeatureExtractor;
+    
     float ** OutputBuffer;
     vector<float *>  FeatureVector;
     
     int iNumChannal;
     int iNumFFT;
     int iBlocksize;
-    
+    float *pfSizeOfResult;
 };
 
 #endif // #if !defined(__MyProject_hdr__)

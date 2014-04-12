@@ -41,9 +41,9 @@ public:
             delete [] FFTMag[i];
             CFft::destroyInstance(MyFFT[i]);
         }
-        delete Spectrum;
-        delete FFTMag;
-        delete MyFFT;
+//        delete [] Spectrum;
+//        delete [] FFTMag;
+//        delete [] MyFFT;
         
     }
     
@@ -53,7 +53,9 @@ public:
     
     void chooseFeature(int index);
     
-    string getChosenFeatures() const  ;
+    string getChosenFeatures() const;
+    
+    int  getChosenFeatureNum();
     
     void setTest(bool testStatus);
     

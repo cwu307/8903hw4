@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
                             sOutputFilePath;
 
     float                   **ppfAudioData  = 0;
+    float                   **ppfOutput     = 0;
     static const int        kBlockSize      = 1024;
     int                     iNumFFT         = 1024;
     
@@ -49,6 +50,7 @@ int main(int argc, char* argv[])
     std::fstream            hOutputFile;
     CAudioFileIf::FileSpec_t stFileSpec;
     CMyProject              *phMyProject = 0;
+    float                   *pfSizeOfResult;
 
     // detect memory leaks in win32
 #if (defined(WITH_MEMORYCHECK) && !defined(NDEBUG) && defined (GTCMT_WIN32))
@@ -95,33 +97,66 @@ int main(int argc, char* argv[])
         ppfAudioData[i] = new float [kBlockSize];
     
     CMyProject::createInstance(phMyProject);
-    phMyProject->initInstance(iNumFFT, kBlockSize, stFileSpec.fSampleRateInHz);
+    phMyProject->initInstance(iNumFFT, kBlockSize, stFileSpec.fSampleRateInHz, stFileSpec.iNumChannels);
     
+    pfSizeOfResult = new float [2];
+    for (int i = 0; i < 2; i++)
+    {
+        pfSizeOfResult[i] = 0;
+    }
+    
+
     // read wave
     while (!phInputFile->isEof())
     {
+        
+        //prepare to process
         int iNumFrames = kBlockSize;
+        phMyProject->getSizeOfResult(pfSizeOfResult, iNumFrames);
+        
+        //create a buffer for output
+        ppfOutput = new float* [stFileSpec.iNumChannels];
+        for (int c = 0; c < stFileSpec.iNumChannels; c++)
+        {
+            ppfOutput[c] = new float [(int)pfSizeOfResult[1]];
+        }
+        int test = (int)pfSizeOfResult[1];
+        
+        //read in one block of signal (simulate process call)
         phInputFile->readData(ppfAudioData, iNumFrames);
 
-        for (int i = 0; i < iNumFrames; i++)
+        
+        phMyProject->process(ppfAudioData, ppfOutput, iNumFrames);
+        
+        
+        //write ppfOutput into txt file
+        for (int i = 0; i < (int)pfSizeOfResult[1]; i++)
         {
-            for (int c = 0; c < stFileSpec.iNumChannels; c++)
+            
+            for (int c = 0; c < stFileSpec.iNumChannels; c ++)
             {
-                phMyProject->process(ppfAudioData, ppfAudioData, iNumFrames);
-                
-                hOutputFile << ppfAudioData[c][i] << "\t";
+                hOutputFile << "\t" << ppfOutput[c][i];
+                //cout << ppfOutput[c][i] << endl;
             }
             hOutputFile << endl;
         }
-
+        
+        //delete the buffer
+        for (int c = 0 ; c < stFileSpec.iNumChannels; c++)
+        {
+            delete [] ppfOutput[c];
+        }
+        delete [] ppfOutput;
     }
-
+    
+    
     // close the files
     CAudioFileIf::destroyInstance(phInputFile);
     hOutputFile.close();
     CMyProject::destroyInstance(phMyProject);
 
     // free memory
+    delete [] pfSizeOfResult;
     for (int i = 0; i < stFileSpec.iNumChannels; i++)
         delete [] ppfAudioData[i];
     delete [] ppfAudioData;
