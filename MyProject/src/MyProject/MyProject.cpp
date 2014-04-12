@@ -106,7 +106,7 @@ Error_t CMyProject::initInstance(int NumFFT, int Blocksize, float SampleRate, in
     MyFeatureExtractor->initFeatureExtractor();
     
     
-    MyInputBuff = new CInputBuffSrc<float>(iNumChannal,Blocksize*2,iNumFFT-1);
+    MyInputBuff = new CInputBuffSrc<float>(iNumChannal,Blocksize*2,0);
     
     for (int i = 0 ;  i < NumChannel; i++) {
         
