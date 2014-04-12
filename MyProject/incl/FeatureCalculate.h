@@ -72,6 +72,13 @@ public:
         m_fTotalSpecSum = new float [m_iNumChannel];
         m_fFractionSpecSum = new float [m_iNumChannel];
         m_iRolloffPoint = new int [m_iNumChannel];
+        for (int i = 0; i < m_iNumChannel; i++)
+        {
+            m_fTotalSpecSum[i] = 0;
+            m_fFractionSpecSum[i] = 0;
+            m_iRolloffPoint[i] = 0;
+        }
+        
     }
     
     ~SpectralRolloff()

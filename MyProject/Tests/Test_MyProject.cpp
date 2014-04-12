@@ -31,7 +31,7 @@ SUITE(MyProject)
 
 SUITE(FeatureExtract){
     struct FeatureExt{
-        FeatureExt():iNumChannel(2), NumFFT(1024), SampleRate(44100)
+        FeatureExt():iNumChannel(2), NumFFT(4096), SampleRate(44100)
         {
             MyTestFeatureExtractor = new FeatureExtractor(SampleRate,NumFFT,iNumChannel);
             MyTestFeatureExtractor -> setTest(true);
@@ -160,32 +160,44 @@ SUITE(FeatureExtract){
         
     }
     
-    TEST_FIXTURE(FeatureExt, DCinputSR)
+    TEST_FIXTURE(FeatureExt, IncreaseSigSR)
     {
         std::vector<float *> results;
         MyTestFeatureExtractor -> chooseFeature(2);
         MyTestFeatureExtractor -> initFeatureExtractor();
-        MyTestFeatureExtractor -> setTest(false);
+        MyTestFeatureExtractor -> setTest(true);
         float **myTestSig;
-        myTestSig = new float* [iNumChannel];
+//        myTestSig = new float* [iNumChannel];
 //        for (int c = 0; c < iNumChannel; c++)
 //        {
 //            myTestSig[c] = new float [NumFFT];
 //            CSignalGen::generateDc(myTestSig[c], NumFFT, 0.0);
-//            myTestSig[c][0] = 1;
+//            myTestSig[c][1023] = 1;
 //        }
+        
+        myTestSig = new float* [iNumChannel];
         for (int c = 0; c < iNumChannel; c++)
         {
             myTestSig[c] = new float [NumFFT];
-            CSignalGen::generateSine(myTestSig[c], 256, SampleRate, NumFFT);
-            //myTestSig[c][0] = 1;
+            
+            for (int i = 0; i < NumFFT; i++)
+            {
+                myTestSig[c][i] = i;
+            }
         }
+        
+               
+//        for (int c = 0; c < iNumChannel; c++)
+//        {
+//            myTestSig[c] = new float [NumFFT];
+//            CSignalGen::generateSine(myTestSig[c], 256, SampleRate, NumFFT);
+//        }
         
         MyTestFeatureExtractor -> featureExtract(myTestSig,results);
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
         for (int i = 0 ; i < iNumChannel; i++) {
-            //default kappa = 0.85
-            CHECK_CLOSE( 256/ 0.85,  MyOutput[i], 2);
+            //compare with answer from matlab
+            CHECK_CLOSE( 20333 ,  MyOutput[i], 0.01);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
         
@@ -229,7 +241,7 @@ SUITE(FeatureExtract){
         memcpy(MyOutput, results[0], sizeof(float)*iNumChannel);
         for (int i = 0 ; i < iNumChannel; i++) {
             //CHECK_CLOSE(0, MyOutput[i], 0.01);
-            CHECK_EQUAL(1/NumFFT, MyOutput[i]);
+            CHECK_CLOSE(1.0/NumFFT, MyOutput[i], 0.01);
         }
         MyTestFeatureExtractor -> destroyFeatureExtractor();
         

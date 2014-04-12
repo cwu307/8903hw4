@@ -120,12 +120,9 @@ int main(int argc, char* argv[])
         {
             ppfOutput[c] = new float [(int)pfSizeOfResult[1]];
         }
-        int test = (int)pfSizeOfResult[1];
         
         //read in one block of signal (simulate process call)
         phInputFile->readData(ppfAudioData, iNumFrames);
-
-        
         phMyProject->process(ppfAudioData, ppfOutput, iNumFrames);
         
         
@@ -133,7 +130,7 @@ int main(int argc, char* argv[])
         for (int i = 0; i < (int)pfSizeOfResult[1]; i++)
         {
             
-            for (int c = 0; c < stFileSpec.iNumChannels; c ++)
+            for (int c = 0; c < stFileSpec.iNumChannels; c++)
             {
                 hOutputFile << "\t" << ppfOutput[c][i];
                 //cout << ppfOutput[c][i] << endl;

@@ -76,13 +76,12 @@ void SpectralRolloff::process(float **ppfSpectrumInput, float *pfSROutput)
         {
             m_fFractionSpecSum[c] = m_fFractionSpecSum[c] + ppfSpectrumInput[c][i];
             
-            if (m_fFractionSpecSum[c] >= m_fKappa * m_fTotalSpecSum[c])
+            if (m_fFractionSpecSum[c] >= m_fKappa * (float)m_fTotalSpecSum[c])
             {
-                pfSROutput[c] = (float)i / m_iNumFFT * (m_fSampleRate/2);
+                pfSROutput[c] = ((float)i / (float)m_iNumFFT) * (m_fSampleRate / 2.0);
                 break;
             }
         }
-        
     }
     
     //set the sum to be zeros after calculations
@@ -137,7 +136,7 @@ void MyZeroCrossing::process(float **ppfWaveformInput, float *pfZCOutput)
     
     for (int c = 0; c < m_iNumChannel; c++)
     {
-        pfZCOutput[c] = 1 /(2 * m_iBlockSize) * m_fSignSum[c];
+        pfZCOutput[c] = 1.0 /(2.0 * m_iBlockSize) * m_fSignSum[c];
     }
     
     //set the sum to be zeros after calculations

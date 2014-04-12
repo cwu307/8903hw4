@@ -106,7 +106,7 @@ Error_t CMyProject::initInstance(int NumFFT, int Blocksize, float SampleRate, in
     MyFeatureExtractor->initFeatureExtractor();
     
     
-    MyInputBuff = new CInputBuffSrc<float>(iNumChannal,Blocksize*2,0);
+    MyInputBuff = new CInputBuffSrc<float>(iNumChannal,Blocksize*2);
     
     for (int i = 0 ;  i < NumChannel; i++) {
         
@@ -131,7 +131,7 @@ Error_t CMyProject::process(float **ppfInputBuffer, float **ppfOutputBuffer, int
     MyInputBuff -> setDataPtr2Hold(ppfInputBuffer, iNumberOfFrames);
     
     int repeat = 0 ;
-    while (MyInputBuff -> getBlock(OutputBuffer, iNumFFT, iNumFFT))
+    while (MyInputBuff -> getBlock(OutputBuffer, iNumFFT, iNumFFT-1))
     {
         MyFeatureExtractor -> featureExtract(OutputBuffer, FeatureVector);
         repeat ++;
@@ -142,7 +142,7 @@ Error_t CMyProject::process(float **ppfInputBuffer, float **ppfOutputBuffer, int
     {
         for (int i = 0; i < repeat * MyFeatureExtractor->getChosenFeatureNum(); i++)
         {
-            ppfOutputBuffer[c][i] = FeatureVector[c][i];
+            ppfOutputBuffer[c][i] = FeatureVector[i][c];
         }
     }
     
