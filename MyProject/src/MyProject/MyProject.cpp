@@ -90,10 +90,12 @@ Error_t CMyProject::initInstance(int NumFFT, int Blocksize, float SampleRate, in
     iNumFFT = NumFFT;
     iBlocksize = Blocksize;
     
-    pfSizeOfResult = new float [2];
+    pfSizeOfBlock = new float [2];
+    m_pfSizeOfResult = new float [2];
     for (int i = 0; i < 2; i++)
     {
-        pfSizeOfResult[i] = 0;
+        pfSizeOfBlock[i] = 0;
+        m_pfSizeOfResult[i] = 0;
     }
     
     MyFeatureExtractor = new FeatureExtractor(SampleRate, iNumFFT,iNumChannal);
@@ -108,11 +110,14 @@ Error_t CMyProject::initInstance(int NumFFT, int Blocksize, float SampleRate, in
     
     MyInputBuff = new CInputBuffSrc<float>(iNumChannal,Blocksize*2);
     
-    for (int i = 0 ;  i < NumChannel; i++) {
-        
+    for (int i = 0 ;  i < NumChannel; i++)
+    {
         OutputBuffer[i] = new float[iNumFFT];
     }
     return kNoError;
+    
+    //intialize col & row counter
+    iRowCount = 0;
 }
 
 Error_t CMyProject::resetInstance ()
@@ -120,9 +125,10 @@ Error_t CMyProject::resetInstance ()
     // reset buffers and variables to default values
     MyFeatureExtractor->destroyFeatureExtractor();
     delete MyFeatureExtractor;
-    delete [] pfSizeOfResult;
+    delete [] pfSizeOfBlock;
+    delete [] m_pfSizeOfResult;
     MyInputBuff -> reset();
-
+    iRowCount = 0;    
     return kNoError;
 }
 
@@ -135,15 +141,21 @@ Error_t CMyProject::process(float **ppfInputBuffer, float **ppfOutputBuffer, int
     {
         MyFeatureExtractor -> featureExtract(OutputBuffer, FeatureVector);
         repeat ++;
+        
+        MyFeatureExtractor -> featureExtract(OutputBuffer, AllFeatureVector);
+        iRowCount++;
     }
     MyInputBuff -> releaseDataPtr();
-    
-    for (int c = 0; c < iNumChannal; c++)
+
+
+    for (int i = 0; i < repeat * MyFeatureExtractor->getChosenFeatureNum(); i++)
     {
-        for (int i = 0; i < repeat * MyFeatureExtractor->getChosenFeatureNum(); i++)
+        for (int c = 0; c < iNumChannal; c++)
         {
             ppfOutputBuffer[c][i] = FeatureVector[i][c];
+
         }
+        //AllFeatureVector.push_back(FeatureVector[i]);
     }
     
     FeatureVector.clear();
@@ -151,17 +163,32 @@ Error_t CMyProject::process(float **ppfInputBuffer, float **ppfOutputBuffer, int
     return kNoError;
 }
 
-void CMyProject::getSizeOfResult(float *pfSizeOfResult, int iNumOfFrames)
+void CMyProject::getSizeOfBlock(float *pfSizeOfBlock, int iNumOfFrames)
 {
     int iRepeat = iNumOfFrames / iNumFFT;
     int iNumOfFeaetures = MyFeatureExtractor->getChosenFeatureNum();
-    pfSizeOfResult[0] = iNumChannal;
-    pfSizeOfResult[1] = iRepeat * iNumOfFeaetures;
+    pfSizeOfBlock[0] = iNumChannal;
+    pfSizeOfBlock[1] = iRepeat * iNumOfFeaetures;
 }
 
+void CMyProject::getSizeOfResult(float *pfSizeOfResult)
+{
+    pfSizeOfResult[0] = iNumChannal; //Channel
+    pfSizeOfResult[1] = iRowCount * MyFeatureExtractor->getChosenFeatureNum(); //features
+    m_pfSizeOfResult[0] = pfSizeOfResult[0];
+    m_pfSizeOfResult[1] = pfSizeOfResult[1];
+}
 
-
-
+void CMyProject::getResult(float **ppfAllResults)
+{
+    for (int i = 0; i < m_pfSizeOfResult[1]; i++)
+    {
+        for (int c = 0; c < m_pfSizeOfResult[0]; c++)
+        {
+            ppfAllResults[c][i] = AllFeatureVector[i][c];
+        }
+    }
+}
 
 
 

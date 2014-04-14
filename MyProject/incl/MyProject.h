@@ -31,9 +31,12 @@ public:
     
     virtual Error_t process (float **ppfInputBuffer, float **ppfOutputBuffer, int iNumberOfFrames);
     
-    void getSizeOfResult(float *pfSizeOfResult, int iNumOfFrames);
+    void getSizeOfBlock(float *pfSizeOfBlock, int iNumOfFrames);
+    void getSizeOfResult(float *pfSizeOfResult);
     void getResult(float **ppfResults);
-    
+
+private:
+    int iRowCount;
     
 protected:
     
@@ -45,11 +48,13 @@ protected:
     
     float ** OutputBuffer;
     vector<float *>  FeatureVector;
+    vector<float *>  AllFeatureVector;
     
     int iNumChannal;
     int iNumFFT;
     int iBlocksize;
-    float *pfSizeOfResult;
+    float *pfSizeOfBlock;
+    float *m_pfSizeOfResult;
 };
 
 #endif // #if !defined(__MyProject_hdr__)

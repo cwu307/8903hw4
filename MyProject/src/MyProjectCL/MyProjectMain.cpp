@@ -50,7 +50,10 @@ int main(int argc, char* argv[])
     std::fstream            hOutputFile;
     CAudioFileIf::FileSpec_t stFileSpec;
     CMyProject              *phMyProject = 0;
-    float                   *pfSizeOfResult;
+    float                   *pfSizeOfBlock;
+    float                   *pfSizeOfResults;
+    float                   **ppfAllResults;
+
 
     // detect memory leaks in win32
 #if (defined(WITH_MEMORYCHECK) && !defined(NDEBUG) && defined (GTCMT_WIN32))
@@ -99,10 +102,12 @@ int main(int argc, char* argv[])
     CMyProject::createInstance(phMyProject);
     phMyProject->initInstance(iNumFFT, kBlockSize, stFileSpec.fSampleRateInHz, stFileSpec.iNumChannels);
     
-    pfSizeOfResult = new float [2];
+    pfSizeOfBlock = new float [2];
+    pfSizeOfResults = new float [2];
     for (int i = 0; i < 2; i++)
     {
-        pfSizeOfResult[i] = 0;
+        pfSizeOfBlock[i] = 0;
+        pfSizeOfResults[i]  = 0;
     }
     
 
@@ -112,13 +117,13 @@ int main(int argc, char* argv[])
         
         //prepare to process
         int iNumFrames = kBlockSize;
-        phMyProject->getSizeOfResult(pfSizeOfResult, iNumFrames);
+        phMyProject->getSizeOfBlock(pfSizeOfBlock, iNumFrames);
         
         //create a buffer for output
         ppfOutput = new float* [stFileSpec.iNumChannels];
         for (int c = 0; c < stFileSpec.iNumChannels; c++)
         {
-            ppfOutput[c] = new float [(int)pfSizeOfResult[1]];
+            ppfOutput[c] = new float [(int)pfSizeOfBlock[1]];
         }
         
         //read in one block of signal (simulate process call)
@@ -127,7 +132,7 @@ int main(int argc, char* argv[])
         
         
         //write ppfOutput into txt file
-        for (int i = 0; i < (int)pfSizeOfResult[1]; i++)
+        for (int i = 0; i < (int)pfSizeOfBlock[1]; i++)
         {
             
             for (int c = 0; c < stFileSpec.iNumChannels; c++)
@@ -146,6 +151,30 @@ int main(int argc, char* argv[])
         delete [] ppfOutput;
     }
     
+
+    
+    phMyProject->getSizeOfResult(pfSizeOfResults);
+    ppfAllResults = new float *[(int)pfSizeOfResults[0]];
+    for (int i = 0; i < pfSizeOfResults[0]; i++)
+    {
+        ppfAllResults[i] = new float [(int)pfSizeOfResults[1]];
+    }
+    phMyProject->getResult(ppfAllResults);
+    
+    for (int i = 0; i < (int)pfSizeOfResults[1]; i++)
+    {
+        for (int c = 0; c < (int)pfSizeOfResults[0]; c++)
+        {
+            //hOutputFile << "\t" << ppfOutput[c][i];
+            cout << ppfAllResults[c][i] << "\t" ;
+        }
+        //hOutputFile << endl;
+        cout << endl;
+    }
+    
+    
+    
+
     
     // close the files
     CAudioFileIf::destroyInstance(phInputFile);
@@ -153,7 +182,8 @@ int main(int argc, char* argv[])
     CMyProject::destroyInstance(phMyProject);
 
     // free memory
-    delete [] pfSizeOfResult;
+    delete [] pfSizeOfBlock;
+    delete [] pfSizeOfResults;
     for (int i = 0; i < stFileSpec.iNumChannels; i++)
         delete [] ppfAudioData[i];
     delete [] ppfAudioData;
